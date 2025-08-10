@@ -1,5 +1,9 @@
 import DetailClientPage from "./DetailClientPage";
 
-export default function Page({ params }: { params: { slug: string } }) {
+type PageProps = {
+  params: { slug: string };
+};
+
+export default function Page({ params }: PageProps) {
   return <DetailClientPage slug={params.slug} />;
 }
