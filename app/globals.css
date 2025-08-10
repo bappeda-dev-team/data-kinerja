@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
-body {
-  background-color: #f8fafc; /* light gray background */
+@theme {
+  --color-sidebar-bg: #1A233A;
+  --color-header-bg: #1A233A;
+  --color-sidebar-text: #FFFFFF;
+  --color-sidebar-active-bg: #FFFFFF;
+  --color-sidebar-active-text: #1A233A;
+  --color-content-bg: #F8F9FA;
+  --color-filter-bar-bg: #2C3A57; 
+  --color-button-blue: #0D6EFD;
+  --color-success-green: #198754;
+  --color-danger-red: #DC3545;
+
+  --font-sans: "Poppins", "sans-serif";
 }

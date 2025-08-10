@@ -1,34 +1,60 @@
-// src/components/layout/Sidebar.tsx (Updated)
-'use client'; 
+'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Building, User, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  Home, 
+  Landmark, 
+  Users, 
+  LogOut,
+  PanelLeftClose, 
+  PanelRightClose 
+} from 'lucide-react';
 
-// ... (kode type NavItem dan const navItems tetap sama dari sebelumnya)
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/pemda', icon: Building, label: 'Pemda' },
-  { href: '/opd', icon: User, label: 'OPD' },
+  { href: '/dashboard', icon: Home, label: 'Dashboard' },
+  { href: '/pemda', icon: Landmark, label: 'Pemda' },
+  { href: '/opd', icon: Users, label: 'OPD' },
   { href: '/logout', icon: LogOut, label: 'Logout' },
 ];
 
-const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
+const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; }) => {
   const pathname = usePathname();
 
   return (
-    <aside className={`w-64 min-h-full bg-sidebar-bg text-sidebar-text flex flex-col transition-all duration-300
-                     md:relative md:translate-x-0 
-                     ${isOpen ? 'translate-x-0' : '-translate-x-full absolute z-40'}`}
+    <aside
+      className={`min-h-full bg-sidebar-bg text-sidebar-text flex flex-col transition-all duration-300
+        ${isOpen ? 'w-64' : 'w-20'}
+        md:relative md:translate-x-0 
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+        fixed md:static z-40 h-full`}
     >
       <div className="flex-1 p-4">
-        <div className="flex items-center gap-4 mb-8 px-2">
-          <Image src="/logo-mahakam-ulu.svg" alt="Logo Mahakam Ulu" width={40} height={40} />
-          <div>
+        <div className="flex items-center justify-center mb-8 relative h-14">
+          {isOpen && (
+            <Image
+              src="/logo-mahakam-ulu.svg"
+              alt="Logo Mahakam Ulu"
+              width={55}
+              height={55}
+              className="transition-opacity duration-300"
+            />
+          )}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-2 text-gray-400 hover:text-white absolute right-0"
+          >
+            {isOpen ? <PanelLeftClose /> : <PanelRightClose />}
+          </button>
+        </div>
+
+        {isOpen && (
+          <div className="text-center mb-8">
             <h1 className="font-bold text-sm leading-tight">KINERJA PEMBANGUNAN DAERAH</h1>
             <p className="text-xs">Kabupaten Mahakam Ulu</p>
           </div>
-        </div>
+        )}
+        
         <nav>
           <ul>
             {navItems.map((item) => {
@@ -43,10 +69,10 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       isActive
                         ? 'bg-sidebar-active-bg text-sidebar-active-text font-bold'
                         : 'hover:bg-blue-900'
-                    } ${isLogout ? 'mt-8 text-red-400 hover:bg-red-900' : ''}`}
+                    } ${isLogout ? 'mt-8 text-red-400 hover:bg-red-900' : ''} ${!isOpen && 'justify-center'}`}
                   >
                     <item.icon size={20} />
-                    <span>{item.label}</span>
+                    <span className={!isOpen ? 'hidden' : 'block'}>{item.label}</span>
                   </Link>
                 </li>
               );
@@ -54,15 +80,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
           </ul>
         </nav>
       </div>
-
-      {/* Ikon Toggle Bawah */}
-      <div className="p-4 border-t border-gray-700">
-        <button className="text-gray-400 hover:text-white w-full flex justify-start gap-2">
-          <ChevronLeft size={20} />
-          <ChevronRight size={20} />
-        </button>
-      </div>
     </aside>
   );
 };
+
 export default Sidebar;

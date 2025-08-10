@@ -1,4 +1,3 @@
-// src/app/dashboard/page.tsx (REWRITTEN for 99% accuracy)
 import { FileText, Download } from 'lucide-react';
 
 const FilterBar = () => {
@@ -22,15 +21,12 @@ const FilterBar = () => {
 const ContentPane = () => {
     return (
         <div className="bg-white rounded-b-lg border border-gray-300 border-t-0">
-            {/* Welcome Message */}
             <div className="p-6">
                 <p className="text-gray-700">Selamat Datang, Admin Pemda!</p>
             </div>
 
-            {/* Divider */}
             <hr className="border-gray-200" />
 
-            {/* Download Row */}
             <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <FileText className="text-button-blue" size={22} />

@@ -1,21 +1,21 @@
 'use client'; 
 import { useState } from 'react';
 import { Home, Plus } from 'lucide-react';
-import JenisDataTable from './_components/JenisDataTable';
-import AddDataModal from './_components/AddDataModal'; 
-import PageHeader from '@/app/components/layout/PageHeader'; 
+import JenisDataTable from '../jenis-data/_components/JenisDataTable';
+import AddDataModal from '../jenis-data/_components/AddDataModal'; 
+import PageHeader from '@/app/components/layout/PageHeader';
 
-const JenisDataPage = () => {
+const JenisDataPageOPD = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div>
-      <PageHeader title="Jenis Data" />
+      <PageHeader title="Laman OPD > Jenis Data" />
       <div className="bg-white p-6 rounded-b-lg shadow-md border border-gray-300 border-t-0">
         <div className="flex items-center text-sm text-gray-500 mb-4">
           <Home size={16} />
           <span className="mx-2">/</span>
-          <span>Pemda</span>
+          <span>OPD</span>
            <span className="mx-2">/</span>
           <span className="font-semibold text-gray-800">Jenis Data</span>
         </div>
@@ -39,4 +39,4 @@ const JenisDataPage = () => {
   );
 };
 
-export default JenisDataPage;
+export default JenisDataPageOPD;
