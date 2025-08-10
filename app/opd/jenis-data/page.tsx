@@ -1,6 +1,7 @@
 'use client'; 
 import { useState } from 'react';
-import { Home, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import Link from 'next/link'; // Import Link
 import JenisDataTable from '../jenis-data/_components/JenisDataTable';
 import AddDataModal from '../jenis-data/_components/AddDataModal'; 
 import PageHeader from '@/app/components/layout/PageHeader';
@@ -10,12 +11,13 @@ const JenisDataPageOPD = () => {
 
   return (
     <div>
-      <PageHeader title="Laman OPD > Jenis Data" />
+      <PageHeader />
       <div className="bg-white p-6 rounded-b-lg shadow-md border border-gray-300 border-t-0">
         <div className="flex items-center text-sm text-gray-500 mb-4">
-          <Home size={16} />
+          {/* Ikon rumah diganti dengan Link ke Dashboard */}
+          <Link href="/dashboard" className="hover:underline">Dashboard</Link>
           <span className="mx-2">/</span>
-          <span>OPD</span>
+          <Link href="/opd" className="hover:underline">OPD</Link>
            <span className="mx-2">/</span>
           <span className="font-semibold text-gray-800">Jenis Data</span>
         </div>
@@ -24,7 +26,7 @@ const JenisDataPageOPD = () => {
           <h2 className="text-xl font-bold text-sidebar-bg">JENIS DATA</h2>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-button-blue text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-colors"
           >
             <Plus size={20} />
             Tambah Jenis Data

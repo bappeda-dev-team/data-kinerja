@@ -11,8 +11,8 @@ const AddDataModal = ({ isOpen, onClose }: ModalProps) => {
   const years = ['2020', '2021', '2022', '2023', '2024', '2025'];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
         <div className="p-5 border-b">
           <h3 className="text-xl font-bold text-center text-gray-800">
             TAMBAH JENIS DATA

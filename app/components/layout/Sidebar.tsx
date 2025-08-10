@@ -69,7 +69,7 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (isOpen: b
                       isActive
                         ? 'bg-sidebar-active-bg text-sidebar-active-text font-bold'
                         : 'hover:bg-blue-900'
-                    } ${isLogout ? 'mt-8 text-red-400 hover:bg-red-900' : ''} ${!isOpen && 'justify-center'}`}
+                    } ${isLogout ? 'mt-8' : ''} ${!isOpen && 'justify-center'}`}
                   >
                     <item.icon size={20} />
                     <span className={!isOpen ? 'hidden' : 'block'}>{item.label}</span>

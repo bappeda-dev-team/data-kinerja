@@ -11,36 +11,37 @@ const DataTable = () => {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm text-left border-collapse">
-        <thead className="bg-teal-500 text-white uppercase">
+        {/* Mengubah rounded-t-lg menjadi rounded-t-xl untuk sudut yang lebih melengkung */}
+        <thead className="bg-[#10B981] text-white uppercase rounded-t-xl">
           <tr>
-            <th rowSpan={2} className="p-3 border border-gray-300">No</th>
-            <th rowSpan={2} className="p-3 border border-gray-300">Nama Data</th>
-            <th rowSpan={2} className="p-3 border border-gray-300">Rumus Penghitungan</th>
-            <th rowSpan={2} className="p-3 border border-gray-300">Sumber Data</th>
-            <th rowSpan={2} className="p-3 border border-gray-300">Instansi Produsen Data</th>
-            <th colSpan={6} className="p-3 border border-gray-300 text-center">Tahun</th>
-            <th rowSpan={2} className="p-3 border border-gray-300">Satuan</th>
-            <th rowSpan={2} className="p-3 border border-gray-300">Keterangan</th>
+            <th rowSpan={2} className="p-2 border border-gray-300 whitespace-nowrap">No</th>
+            <th rowSpan={2} className="p-2 border border-gray-300 whitespace-nowrap">Nama Data</th>
+            <th rowSpan={2} className="p-2 border border-gray-300 whitespace-nowrap">Rumus Penghitungan</th>
+            <th rowSpan={2} className="p-2 border border-gray-300 whitespace-nowrap">Sumber Data</th>
+            <th rowSpan={2} className="p-2 border border-gray-300 whitespace-nowrap">Instansi Produsen Data</th>
+            <th colSpan={6} className="p-2 border border-gray-300 text-center whitespace-nowrap">Tahun</th>
+            <th rowSpan={2} className="p-2 border border-gray-300 whitespace-nowrap">Satuan</th>
+            <th rowSpan={2} className="p-2 border border-gray-300 whitespace-nowrap">Keterangan</th>
           </tr>
           <tr>
             {years.map(year => (
-              <th key={year} className="p-3 border border-gray-300 text-center">{year}</th>
+              <th key={year} className="p-2 border border-gray-300 text-center whitespace-nowrap">{year}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {tableData.map((row) => (
             <tr key={row.no} className="bg-white hover:bg-gray-50">
-              <td className="p-3 border border-gray-300 text-center">{row.no}</td>
-              <td className="p-3 border border-gray-300">{row.nama}</td>
-              <td className="p-3 border border-gray-300">{row.rumus}</td>
-              <td className="p-3 border border-gray-300">{row.sumber}</td>
-              <td className="p-3 border border-gray-300">{row.instansi}</td>
+              <td className="p-2 border border-gray-300 text-center">{row.no}</td>
+              <td className="p-2 border border-gray-300">{row.nama}</td>
+              <td className="p-2 border border-gray-300">{row.rumus}</td>
+              <td className="p-2 border border-gray-300">{row.sumber}</td>
+              <td className="p-2 border border-gray-300">{row.instansi}</td>
               {years.map(year => (
-                 <td key={year} className="p-3 border border-gray-300"></td>
+                 <td key={year} className="p-2 border border-gray-300"></td>
               ))}
-              <td className="p-3 border border-gray-300">{row.satuan}</td>
-              <td className="p-3 border border-gray-300">{row.keterangan}</td>
+              <td className="p-2 border border-gray-300">{row.satuan}</td>
+              <td className="p-2 border border-gray-300">{row.keterangan}</td>
             </tr>
           ))}
         </tbody>

@@ -1,11 +1,12 @@
 import { FileText, Download } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
-import ContentContainer from '../components/layout/ContentContainer'; // Import komponen baru
+import ContentContainer from '../components/layout/ContentContainer';
 
 const DashboardPage = () => {
   return (
     <>
-      <PageHeader title="Laman Dashboard" />
+      {/* Menghapus prop 'title' dari sini */}
+      <PageHeader />
       <ContentContainer>
         <div className="pb-4">
           <p className="text-gray-700">Selamat Datang, Admin Pemda!</p>

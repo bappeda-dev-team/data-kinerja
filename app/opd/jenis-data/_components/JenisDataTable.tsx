@@ -34,13 +34,13 @@ const JenisDataTable = () => {
               <td className="p-3 border border-gray-300">
                 <div className="flex flex-col items-center gap-2 px-4">
                   <Link href={`${isOpdRoute ? '/opd' : '/pemda'}/jenis-data/${item.id}`} className="w-full">
-                    <button className="bg-success-green text-white px-4 py-1 rounded hover:bg-green-700 w-full">
+                    <button className="bg-gradient-to-r from-green-500 to-teal-500 text-white px-4 py-1 rounded hover:opacity-90 transition-opacity w-full">
                       Show
                     </button>
                   </Link>
                   <button 
                     onClick={() => handleDelete(item.id)}
-                    className="bg-danger-red text-white px-4 py-1 rounded hover:bg-red-700 w-full"
+                    className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-1 rounded hover:opacity-90 transition-opacity w-full"
                   >
                     Hapus
                   </button>
