@@ -50,8 +50,8 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (isOpen: b
 
         {isOpen && (
           <div className="text-center mb-8">
-            <h1 className="font-bold text-sm leading-tight">KINERJA PEMBANGUNAN DAERAH</h1>
-            <p className="text-xs">Kabupaten Mahakam Ulu</p>
+            <h1 className="font-bold text-[15px] leading-tight">KINERJA PEMBANGUNAN DAERAH</h1>
+            <p className="text-[15px]">Kabupaten Mahakam Ulu</p>
           </div>
         )}
         
@@ -69,9 +69,9 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (isOpen: b
                       isActive
                         ? 'bg-sidebar-active-bg text-sidebar-active-text font-bold'
                         : 'hover:bg-blue-900'
-                    } ${isLogout ? 'mt-8' : ''} ${!isOpen && 'justify-center'}`}
+                    } ${isLogout ? 'mt-8 hover:bg-white/20' : ''} ${!isOpen && 'justify-center'}`}
                   >
-                    <item.icon size={20} />
+                    <item.icon size={20} className={isLogout ? 'text-red-400' : ''} />
                     <span className={!isOpen ? 'hidden' : 'block'}>{item.label}</span>
                   </Link>
                 </li>
