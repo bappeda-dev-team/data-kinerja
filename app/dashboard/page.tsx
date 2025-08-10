@@ -5,7 +5,6 @@ import ContentContainer from '../components/layout/ContentContainer';
 const DashboardPage = () => {
   return (
     <>
-      {/* Menghapus prop 'title' dari sini */}
       <PageHeader />
       <ContentContainer>
         <div className="pb-4">
@@ -20,7 +19,7 @@ const DashboardPage = () => {
             <a
                 href="#"
                 download
-                className="flex items-center gap-2 bg-button-blue text-white font-semibold py-2 px-5 rounded-md hover:bg-opacity-90 transition-colors"
+                className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold py-2 px-5 rounded-md hover:opacity-90 transition-colors"
             >
                 <Download size={18} />
                 Download
