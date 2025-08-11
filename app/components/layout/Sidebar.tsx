@@ -68,8 +68,8 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (isOpen: b
                     className={`flex items-center gap-3 p-3 my-1 rounded-md transition-colors ${
                       isActive
                         ? 'bg-sidebar-active-bg text-sidebar-active-text font-bold'
-                        : 'hover:bg-blue-900'
-                    } ${isLogout ? 'mt-8 hover:bg-white/20' : ''} ${!isOpen && 'justify-center'}`}
+                        : 'hover:bg-white/20'
+                    } ${!isOpen && 'justify-center'}`}
                   >
                     <item.icon size={20} className={isLogout ? 'text-red-400' : ''} />
                     <span className={!isOpen ? 'hidden' : 'block'}>{item.label}</span>
