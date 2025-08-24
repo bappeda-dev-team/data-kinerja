@@ -72,7 +72,9 @@ const DataTable = () => {
               <td className="p-2 border border-gray-300">{row.sumber}</td>
               <td className="p-2 border border-gray-300">{row.instansi}</td>
               {years.map(year => (
-                <td key={year} className="p-2 border border-gray-300"></td>
+                <td key={year} className="p-2 border border-gray-300">
+                  {row.tahun[year as keyof typeof row.tahun]}
+                </td>
               ))}
               <td className="p-2 border border-gray-300">{row.satuan}</td>
               <td className="p-2 border border-gray-300 text-center">
