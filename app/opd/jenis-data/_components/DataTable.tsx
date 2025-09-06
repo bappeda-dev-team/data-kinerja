@@ -91,45 +91,40 @@ const DataTable = () => {
       </table>
 
       {/* Modal */}
-      {openModal && (
-        <div 
-          className="fixed inset-0 flex justify-center items-center z-50 p-4"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+{openModal && (
+  <div 
+    className="fixed inset-0 flex justify-center items-center z-50 p-4"
+    style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+    onClick={() => setOpenModal(false)}
+  >
+    <div 
+      className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-lg"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header + Tombol Close */}
+      <div className="flex justify-between items-center p-5 border-b">
+        <h3 className="text-xl font-bold text-gray-800">
+          KETERANGAN DATA
+        </h3>
+        <button
+          onClick={() => setOpenModal(false)}
+          className="text-gray-500 hover:text-gray-800 text-2xl"
         >
-          <div 
-            className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-5 border-b">
-              <h3 className="text-xl font-bold text-center text-gray-800">
-                KETERANGAN DATA
-              </h3>
-            </div>
-            <div className="p-6">
-              <textarea
-                value={keterangan}
-                onChange={(e) => setKeterangan(e.target.value)}
-                placeholder="Masukkan keterangan"
-                className="w-full border rounded-md p-3 mb-6 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={handleSave}
-                  className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-purple-500 to-indigo-500 hover:opacity-90 transition"
-                >
-                  Simpan
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-red-500 to-pink-500 hover:opacity-90 transition"
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          &times;
+        </button>
+      </div>
+
+      {/* Konten Keterangan */}
+      <div className="p-6">
+        {keterangan ? (
+          <p className="text-gray-700 whitespace-pre-line">{keterangan}</p>
+        ) : (
+          <p className="text-gray-400 italic">Belum ada keterangan</p>
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
