@@ -1,15 +1,30 @@
 'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "@/app/components/layout/PageHeader";
 import DataTable from "../_components/DataTable"; 
-import AddDataTableModal from "../_components/AddDataTableModal"; // ⬅️ import modal
+import AddDataTableModal from "../_components/AddDataTableModal";
 
 export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const dataName = slug.toUpperCase();
-  const [openModal, setOpenModal] = useState(false); // ⬅️ state buat modal
+  const [openModal, setOpenModal] = useState(false);
+  const [dataList, setDataList] = useState<any[]>([]);
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch(`https://alurkerja.zeabur.app/jenisdata/${slug}`);
+      const json = await res.json();
+      setDataList(json.data || []);
+    } catch (err) {
+      console.error("Gagal fetch:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [slug]);
 
   return (
     <div>

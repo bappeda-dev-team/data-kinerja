@@ -1,13 +1,47 @@
 'use client'; 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 import JenisDataTable from './_components/JenisDataTable';
 import AddDataModal from './_components/AddDataModal'; 
-import PageHeader from '@/app/components/layout/PageHeader'; 
+import PageHeader from '@/app/components/layout/PageHeader';
 
-const JenisDataPage = () => {
+const JenisDataPageOPD = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [jenisDataList, setJenisDataList] = useState<any[]>([]);
+const handleDelete = async (id: number) => {
+  if (!confirm("Yakin mau hapus data ini?")) return;
+
+  try {
+    const res = await fetch(`https://alurkerja.zeabur.app/jenisdata/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) throw new Error("Gagal hapus data");
+
+    // Hapus dari state
+    setJenisDataList(prev => prev.filter(item => item.id !== id));
+    alert("Data berhasil dihapus!");
+  } catch (err) {
+    console.error(err);
+    alert("Terjadi kesalahan saat menghapus data");
+  }
+};
+
+  // Ambil data dari API
+  const fetchData = async () => {
+    try {
+      const res = await fetch("https://alurkerja.zeabur.app/jenisdata");
+      const json = await res.json();
+      setJenisDataList(json.data || []);
+    } catch (err) {
+      console.error("Gagal fetch:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <div>
@@ -17,8 +51,8 @@ const JenisDataPage = () => {
           {/* Ikon rumah diganti dengan Link ke Dashboard */}
           <Link href="/dashboard" className="hover:underline">Dashboard</Link>
           <span className="mx-2">/</span>
-          <Link href="/pemda" className="hover:underline">Pemda</Link>
-           <span className="mx-2">/</span>
+          <Link href="/opd" className="hover:underline">OPD</Link>
+          <span className="mx-2">/</span>
           <span className="font-semibold text-gray-800">Jenis Data</span>
         </div>
         
@@ -33,12 +67,21 @@ const JenisDataPage = () => {
           </button>
         </div>
 
-        <JenisDataTable />
+        {/* Tabel pakai data dari state */}
+        <JenisDataTable 
+  jenisDataList={jenisDataList} 
+  onDelete={handleDelete} 
+/>
+
       </div>
 
-      <AddDataModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddDataModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSuccess={fetchData} // refresh data setelah tambah
+      />
     </div>
   );
 };
 
-export default JenisDataPage;
+export default JenisDataPageOPD;

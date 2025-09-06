@@ -7,10 +7,11 @@ import Select from 'react-select';
 type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void; // 👈 tambahan
 };
 
 interface OptionType {
-  value: string;
+  value: number;
   label: string;
 }
 
@@ -19,7 +20,7 @@ interface FormValue {
   tahun: OptionType | null;
 }
 
-const AddDataModal = ({ isOpen, onClose }: ModalProps) => {
+const AddDataModal = ({ isOpen, onClose, onSuccess }: ModalProps) => {
   const {
     handleSubmit,
     control,
@@ -34,24 +35,52 @@ const AddDataModal = ({ isOpen, onClose }: ModalProps) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const years = ['2020', '2021', '2022', '2023', '2024', '2025'];
-  const yearOptions: OptionType[] = years.map(year => ({ value: year, label: year }));
+  const yearOptions: OptionType[] = [
+    { label: "Tahun 2019", value: 2019 },
+    { label: "Tahun 2020", value: 2020 },
+    { label: "Tahun 2021", value: 2021 },
+    { label: "Tahun 2022", value: 2022 },
+    { label: "Tahun 2023", value: 2023 },
+    { label: "Tahun 2024", value: 2024 },
+    { label: "Tahun 2025", value: 2025 },
+    { label: "Tahun 2026", value: 2026 },
+    { label: "Tahun 2027", value: 2027 },
+    { label: "Tahun 2028", value: 2028 },
+    { label: "Tahun 2029", value: 2029 },
+    { label: "Tahun 2030", value: 2030 },
+  ];
 
   const onSubmit: SubmitHandler<FormValue> = async (data) => {
     setIsSubmitting(true);
-    
+
     const payload = {
       jenis_data: data.jenis_data,
       tahun: data.tahun?.value,
     };
-    
-    console.log("Data yang akan dikirim ke backend:", payload);
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch("https://alurkerja.zeabur.app/jenisdata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    setIsSubmitting(false);
-    alert('Data berhasil disimpan! Cek console log.');
-    handleClose();
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Gagal menyimpan data: ${errText}`);
+      }
+
+      await response.json();
+      alert("Data berhasil disimpan ke API!");
+
+      if (onSuccess) onSuccess(); // 👈 refresh data di parent
+      handleClose();
+    } catch (error: any) {
+      console.error("Error saat kirim data:", error);
+      alert(`Gagal menyimpan data ke API: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -62,11 +91,11 @@ const AddDataModal = ({ isOpen, onClose }: ModalProps) => {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 flex justify-center items-center z-50 p-4"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
     >
-      <div 
+      <div
         className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-3xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -78,6 +107,7 @@ const AddDataModal = ({ isOpen, onClose }: ModalProps) => {
         <div className="p-8">
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 gap-6">
+              {/* Input jenis data */}
               <div>
                 <label htmlFor="jenis_data" className="block text-sm font-bold text-gray-700 mb-2">
                   JENIS DATA:
@@ -98,6 +128,8 @@ const AddDataModal = ({ isOpen, onClose }: ModalProps) => {
                 />
                 {errors.jenis_data && <p className="text-red-500 text-sm mt-1">{errors.jenis_data.message}</p>}
               </div>
+
+              {/* Input tahun */}
               <div>
                 <label htmlFor="tahun" className="block text-sm font-bold text-gray-700 mb-2">
                   TAHUN:
@@ -107,30 +139,32 @@ const AddDataModal = ({ isOpen, onClose }: ModalProps) => {
                   control={control}
                   rules={{ required: 'Tahun tidak boleh kosong' }}
                   render={({ field }) => (
-                     <Select
-                        {...field}
-                        inputId="tahun"
-                        options={yearOptions}
-                        placeholder="Pilih Tahun"
-                        isClearable
-                        styles={{
-                            control: (base, state) => ({
-                                ...base,
-                                padding: '0.30rem',
-                                borderRadius: '0.375rem',
-                                borderColor: errors.tahun ? 'rgb(239 68 68)' : '#D1D5DB',
-                                '&:hover': {
-                                    borderColor: errors.tahun ? 'rgb(239 68 68)' : '#D1D5DB',
-                                },
-                                boxShadow: state.isFocused ? (errors.tahun ? '0 0 0 2px rgb(254 202 202)' : '0 0 0 2px rgb(191 219 254)') : 'none',
-                            }),
-                        }}
-                     />
+                    <Select
+                      {...field}
+                      id="tahun"
+                      options={yearOptions}
+                      placeholder="Pilih Tahun"
+                      isClearable
+                      styles={{
+                        control: (base, state) => ({
+                          ...base,
+                          padding: '0.30rem',
+                          borderRadius: '0.375rem',
+                          borderColor: errors.tahun ? 'rgb(239 68 68)' : '#D1D5DB',
+                          '&:hover': {
+                            borderColor: errors.tahun ? 'rgb(239 68 68)' : '#D1D5DB',
+                          },
+                          boxShadow: state.isFocused ? (errors.tahun ? '0 0 0 2px rgb(254 202 202)' : '0 0 0 2px rgb(191 219 254)') : 'none',
+                        }),
+                      }}
+                    />
                   )}
                 />
-                 {errors.tahun && <p className="text-red-500 text-sm mt-1">{errors.tahun.message}</p>}
+                {errors.tahun && <p className="text-red-500 text-sm mt-1">{errors.tahun.message}</p>}
               </div>
             </div>
+
+            {/* Tombol */}
             <div className="flex flex-col gap-4 mt-8">
               <button
                 type="submit"
