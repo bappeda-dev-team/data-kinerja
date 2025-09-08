@@ -51,7 +51,7 @@ const handleDelete = async (id: number) => {
           {/* Ikon rumah diganti dengan Link ke Dashboard */}
           <Link href="/dashboard" className="hover:underline">Dashboard</Link>
           <span className="mx-2">/</span>
-          <Link href="/opd" className="hover:underline">Pemda</Link>
+          <Link href="/pemda" className="hover:underline">Pemda</Link>
           <span className="mx-2">/</span>
           <span className="font-semibold text-gray-800">Jenis Data</span>
         </div>
