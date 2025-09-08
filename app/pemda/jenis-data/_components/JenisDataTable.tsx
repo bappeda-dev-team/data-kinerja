@@ -4,12 +4,12 @@ import { usePathname } from 'next/navigation';
 
 type JenisDataTableProps = {
   jenisDataList: { id: number; jenis_data: string }[];
-  onDelete: (id: number) => void; // 👈 tambahan
+  onDelete: (id: number) => void; // tambahan
 };
 
 const JenisDataTable = ({ jenisDataList, onDelete }: JenisDataTableProps) => {
   const pathname = usePathname();
-  const isOpdRoute = pathname?.startsWith('/opd');
+  const isPemdaRoute = pathname?.startsWith('/pemda');
 
   return (
     <div className="overflow-x-auto">
@@ -30,7 +30,7 @@ const JenisDataTable = ({ jenisDataList, onDelete }: JenisDataTableProps) => {
                 <td className="p-3 border border-gray-300">
                   <div className="flex flex-col items-center gap-2 px-4">
                     <Link
-                      href={`${isOpdRoute ? '/opd' : '/pemda'}/jenis-data/${item.id}`}
+                      href={`${isPemdaRoute ? '/pemda' : '/opd'}/jenis-data/${item.id}`}
                       className="w-full"
                     >
                       <button className="bg-gradient-to-r from-green-500 to-teal-500 text-white px-4 py-1 rounded hover:opacity-90 transition-opacity w-full">
@@ -38,7 +38,7 @@ const JenisDataTable = ({ jenisDataList, onDelete }: JenisDataTableProps) => {
                       </button>
                     </Link>
                     <button
-                      onClick={() => onDelete(item.id)} // 👈 trigger ke parent
+                      onClick={() => onDelete(item.id)} // trigger ke parent
                       className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-1 rounded hover:opacity-90 transition-opacity w-full"
                     >
                       Hapus

@@ -24,7 +24,7 @@ const AddDataTableModal = ({ isOpen, onClose }: ModalProps) => {
   };
 
   const handleSave = () => {
-  console.log("Data berhasil disimpan:", formData); // ⬅️ ini nanti muncul di console
+  console.log("Data berhasil disimpan:", formData); // ini nanti muncul di console
   alert(`Data berhasil disimpan:\n${JSON.stringify(formData, null, 2)}`);
   onClose();
   };

@@ -7,7 +7,7 @@ import Select from 'react-select';
 type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void; // 👈 tambahan
+  onSuccess?: () => void; // tambahan
 };
 
 interface OptionType {
@@ -73,7 +73,7 @@ const AddDataModal = ({ isOpen, onClose, onSuccess }: ModalProps) => {
       await response.json();
       alert("Data berhasil disimpan ke API!");
 
-      if (onSuccess) onSuccess(); // 👈 refresh data di parent
+      if (onSuccess) onSuccess(); // refresh data di parent
       handleClose();
     } catch (error: any) {
       console.error("Error saat kirim data:", error);

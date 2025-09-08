@@ -6,7 +6,7 @@ import JenisDataTable from './_components/JenisDataTable';
 import AddDataModal from './_components/AddDataModal'; 
 import PageHeader from '@/app/components/layout/PageHeader';
 
-const JenisDataPageOPD = () => {
+const JenisDataPagePemda = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [jenisDataList, setJenisDataList] = useState<any[]>([]);
 const handleDelete = async (id: number) => {
@@ -51,7 +51,7 @@ const handleDelete = async (id: number) => {
           {/* Ikon rumah diganti dengan Link ke Dashboard */}
           <Link href="/dashboard" className="hover:underline">Dashboard</Link>
           <span className="mx-2">/</span>
-          <Link href="/opd" className="hover:underline">OPD</Link>
+          <Link href="/opd" className="hover:underline">Pemda</Link>
           <span className="mx-2">/</span>
           <span className="font-semibold text-gray-800">Jenis Data</span>
         </div>
@@ -84,4 +84,4 @@ const handleDelete = async (id: number) => {
   );
 };
 
-export default JenisDataPageOPD;
+export default JenisDataPagePemda;

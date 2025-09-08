@@ -36,9 +36,9 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
           <div className="flex items-center text-sm text-gray-500">
             <Link href="/dashboard" className="hover:underline">Dashboard</Link>
             <span className="mx-2">/</span>
-            <Link href="/opd" className="hover:underline">OPD</Link>
+            <Link href="/pemda" className="hover:underline">Pemda</Link>
             <span className="mx-2">/</span>
-            <Link href="/opd/jenis-data" className="hover:underline">Jenis Data</Link>
+            <Link href="/pemda/jenis-data" className="hover:underline">Jenis Data</Link>
             <span className="mx-2">/</span>
             <span className="font-semibold text-gray-800">{dataName}</span>
           </div>

@@ -1,10 +1,10 @@
 import DetailClientPage from "./DetailClientPage";
 
 type PageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
-export default function Page({ params }: PageProps) {
-  const { slug } = params;
+export default async function Page({ params }: PageProps) {
+  const { slug } = await params;
   return <DetailClientPage slug={slug} />;
 }
