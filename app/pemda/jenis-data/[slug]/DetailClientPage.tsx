@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
@@ -8,21 +8,50 @@ import DataTable from "../_components/DataTable";
 import AddDataTableModal from "../_components/AddDataTableModal";
 import EditDataTableModal from "../_components/EditDataTableModal";
 
+// ✅ Definisikan tipe data sesuai struktur API
+type Target = {
+  tahun: string;
+  satuan: string;
+  target: string;
+};
+
+export interface DataKinerja {
+  id: number;
+  jenis_data_id: number;
+  nama_data: string;
+  rumus_perhitungan: string;
+  sumber_data: string;
+  instansi_produsen_data: string;
+  keterangan: string;
+  target: {
+    tahun: string;
+    satuan: string;
+    target: string;
+  }[];
+}
+
 export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const dataName = slug.toUpperCase();
   const [openModalAdd, setOpenModalAdd] = useState(false);
   const [openModalEdit, setOpenModalEdit] = useState(false);
-  const [dataList, setDataList] = useState<any[]>([]);
-  const [dataItemToEdit, setDataItemToEdit] = useState(null);
+  const [dataList, setDataList] = useState<DataKinerja[]>([]);
+  const [dataItemToEdit, setDataItemToEdit] = useState<DataKinerja | null>(
+    null
+  );
 
+  // ✅ Fungsi fetch data
   const fetchData = async () => {
     try {
-      const res = await fetch(`https://alurkerja.zeabur.app/datakinerjapemda/list/${slug}`);
+      const res = await fetch(
+        `https://alurkerja.zeabur.app/datakinerjapemda/list/${slug}`
+      );
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
       const json = await res.json();
-      setDataList(json.data || []); 
+      setDataList(json.data || []);
     } catch (err) {
       console.error("Gagal fetch data kinerja:", err);
-      setDataList([]); 
+      setDataList([]);
     }
   };
 
@@ -30,67 +59,81 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
     fetchData();
   }, [slug]);
 
-// Create a success handler for the modal
+  // ✅ Success handler
   const handleAddSuccess = () => {
-    setOpenModalAdd(false); // 1. Close the modal
-    fetchData();         // 2. Refresh the data list
+    setOpenModalAdd(false);
+    fetchData();
   };
 
-  const handleEditSuccess = async () => {
-    setOpenModalEdit(false); // 1. Close the modal
-    await fetchData(); // 2. Refresh the data list
+  const handleEditSuccess = () => {
+    setOpenModalEdit(false);
+    fetchData();
   };
 
-  // Handler for editing data
-  const handleEdit = (item: any) => {
-    // TODO: Implement your edit logic, e.g., open an edit modal
-    console.log("Edit item:", item);
-    setDataItemToEdit(item);
-    // open an edit modal
+  // ✅ Edit handler
+  const handleEdit = (item: DataKinerja) => {
+    setDataItemToEdit({
+      id: item.id, // pastikan item: DataKinerja
+      jenis_data_id: item.jenis_data_id || 0,
+      nama_data: item.nama_data || "",
+      rumus_perhitungan: item.rumus_perhitungan || "",
+      sumber_data: item.sumber_data || "",
+      instansi_produsen_data: item.instansi_produsen_data || "",
+      keterangan: item.keterangan || "",
+      target: item.target?.length
+        ? item.target
+        : [
+            {
+              tahun: new Date().getFullYear().toString(),
+              satuan: "",
+              target: "",
+            },
+          ],
+    });
     setOpenModalEdit(true);
   };
 
+  // ✅ Delete handler
   const handleDelete = async (id: number) => {
-  // 1. Konfirmasi dari pengguna tetap ada
-  if (window.confirm("Apakah Anda yakin ingin menghapus data ini?")) {
-    
+    if (!window.confirm("Apakah Anda yakin ingin menghapus data ini?")) return;
+
     try {
-      // 2. Lakukan panggilan API menggunakan fetch dengan metode DELETE
-      const response = await fetch(`https://alurkerja.zeabur.app/datakinerjapemda/${id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `https://alurkerja.zeabur.app/datakinerjapemda/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      // 3. Periksa apakah respons dari server menandakan sukses
-      if (!response.ok) {
-        // Jika gagal, lempar error untuk ditangkap oleh blok catch
-        throw new Error('Gagal menghapus data dari server.');
-      }
+      if (!response.ok) throw new Error("Gagal menghapus data dari server.");
 
-      // 4. Jika berhasil, beri tahu pengguna dan muat ulang data di tabel
-      alert('Data berhasil dihapus!');
-      fetchData(); // Asumsi Anda punya fungsi ini untuk refresh data tabel
-
+      alert("✅ Data berhasil dihapus!");
+      fetchData();
     } catch (error) {
-      // 5. Jika terjadi error (baik dari fetch atau dari server), tampilkan pesan error
       console.error("Gagal menghapus data:", error);
-      alert(error);
+      alert("❌ Terjadi kesalahan saat menghapus data.");
     }
-  }
-};
+  };
 
   return (
     <div>
       <PageHeader />
 
       <div className="bg-white p-6 rounded-b-lg shadow-md border border-gray-300 border-t-0">
-        {/* ... (your existing breadcrumb and button code) ... */}
+        {/* Breadcrumb */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center text-sm text-gray-500">
-            <Link href="/dashboard" className="hover:underline">Dashboard</Link>
+            <Link href="/dashboard" className="hover:underline">
+              Dashboard
+            </Link>
             <span className="mx-2">/</span>
-            <Link href="/pemda" className="hover:underline">Pemda</Link>
+            <Link href="/pemda" className="hover:underline">
+              Pemda
+            </Link>
             <span className="mx-2">/</span>
-            <Link href="/pemda/jenis-data" className="hover:underline">Jenis Data</Link>
+            <Link href="/pemda/jenis-data" className="hover:underline">
+              Jenis Data
+            </Link>
             <span className="mx-2">/</span>
             <span className="font-semibold text-gray-800">{dataName}</span>
           </div>
@@ -109,7 +152,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
           JENIS DATA: {dataName}
         </h2>
 
-        {/* Tabel utama - FIXED */}
+        {/* DataTable */}
         <DataTable
           dataList={dataList}
           onUpdate={handleEdit}
@@ -117,22 +160,24 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
         />
       </div>
 
-      {/* Modal Tambah Data */}
+      {/* Modal Tambah */}
       <AddDataTableModal
         isOpen={openModalAdd}
         onClose={() => setOpenModalAdd(false)}
-        onSuccess={handleAddSuccess} 
-        jenisDataId={slug} 
+        onSuccess={handleAddSuccess}
+        jenisDataId={slug}
       />
 
-      {/* Modal Edit Data */}
-      <EditDataTableModal
-        isOpen={openModalEdit}
-        onClose={() => setOpenModalEdit(false)}
-        onSuccess={handleEditSuccess}
-        jenisDataId={slug}
-        dataItem={dataItemToEdit}
-      />
+      {/* Modal Edit */}
+      {openModalEdit && dataItemToEdit && (
+        <EditDataTableModal
+          isOpen={openModalEdit}
+          onClose={() => setOpenModalEdit(false)}
+          onSuccess={handleEditSuccess}
+          jenisDataId={slug}
+          dataItem={dataItemToEdit}
+        />
+      )}
     </div>
   );
-};
+}

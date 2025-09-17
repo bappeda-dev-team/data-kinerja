@@ -9,7 +9,7 @@ const initialData = [
 const years = ['2020', '2021', '2022', '2023', '2024', '2025'];
 
 const DataTable = () => {
-  const [tableData, setTableData] = useState(initialData);
+  const [tableData ] = useState(initialData);
   const [openModal, setOpenModal] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [keterangan, setKeterangan] = useState("");
@@ -20,28 +20,9 @@ const DataTable = () => {
     setOpenModal(true);
   };
 
-  const handleSave = () => {
-    if (selectedRow === null) return;
+  
 
-    const newData = [...tableData];
-    newData[selectedRow].keterangan = keterangan;
-
-    setTableData(newData);
-    console.log("Data tersimpan:", newData[selectedRow]);
-
-    alert("Keterangan berhasil disimpan!");
-
-    setOpenModal(false);
-    setSelectedRow(null);
-    setKeterangan("");
-  };
-
-  const handleCancel = () => {
-    alert("Aksi dibatalkan.");
-    setOpenModal(false);
-    setSelectedRow(null);
-    setKeterangan("");
-  };
+  
 
   return (
     <div className="overflow-x-auto">

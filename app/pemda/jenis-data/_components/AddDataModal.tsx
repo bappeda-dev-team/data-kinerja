@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
 import React, { useState } from "react";
-import { useForm, Controller, SubmitHandler } from 'react-hook-form';
-import Select from 'react-select';
+import { useForm, Controller, SubmitHandler } from "react-hook-form";
+import Select from "react-select";
 
 type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void; // tambahan
+  onSuccess?: () => void;
 };
 
 interface OptionType {
@@ -20,7 +20,7 @@ interface FormValue {
   tahun: OptionType | null;
 }
 
-const AddDataModal = ({ isOpen, onClose, onSuccess }: ModalProps) => {
+const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const {
     handleSubmit,
     control,
@@ -28,34 +28,25 @@ const AddDataModal = ({ isOpen, onClose, onSuccess }: ModalProps) => {
     formState: { errors },
   } = useForm<FormValue>({
     defaultValues: {
-      jenis_data: '',
+      jenis_data: "",
       tahun: null,
-    }
+    },
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const yearOptions: OptionType[] = [
-    { label: "Tahun 2019", value: 2019 },
-    { label: "Tahun 2020", value: 2020 },
-    { label: "Tahun 2021", value: 2021 },
-    { label: "Tahun 2022", value: 2022 },
-    { label: "Tahun 2023", value: 2023 },
-    { label: "Tahun 2024", value: 2024 },
-    { label: "Tahun 2025", value: 2025 },
-    { label: "Tahun 2026", value: 2026 },
-    { label: "Tahun 2027", value: 2027 },
-    { label: "Tahun 2028", value: 2028 },
-    { label: "Tahun 2029", value: 2029 },
-    { label: "Tahun 2030", value: 2030 },
-  ];
+  const yearOptions: OptionType[] = Array.from({ length: 12 }, (_, i) => {
+    const year = 2019 + i;
+    return { label: `Tahun ${year}`, value: year };
+  });
 
   const onSubmit: SubmitHandler<FormValue> = async (data) => {
+    if (!data.jenis_data || !data.tahun) return; // safety check
     setIsSubmitting(true);
 
     const payload = {
       jenis_data: data.jenis_data,
-      tahun: data.tahun?.value,
+      tahun: data.tahun.value,
     };
 
     try {
@@ -70,14 +61,17 @@ const AddDataModal = ({ isOpen, onClose, onSuccess }: ModalProps) => {
         throw new Error(`Gagal menyimpan data: ${errText}`);
       }
 
-      await response.json();
-      alert("Data berhasil disimpan ke API!");
-
-      if (onSuccess) onSuccess(); // refresh data di parent
+      alert("Data berhasil disimpan!");
+      if (onSuccess) onSuccess();
       handleClose();
-    } catch (error: any) {
-      console.error("Error saat kirim data:", error);
-      alert(`Gagal menyimpan data ke API: ${error.message}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error saat kirim data:", error);
+        alert(`Gagal menyimpan data: ${error.message}`);
+      } else {
+        console.error("Error saat kirim data:", error);
+        alert("Gagal menyimpan data: unknown error");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -93,7 +87,7 @@ const AddDataModal = ({ isOpen, onClose, onSuccess }: ModalProps) => {
   return (
     <div
       className="fixed inset-0 flex justify-center items-center z-50 p-4"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
     >
       <div
         className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-3xl"
@@ -104,63 +98,90 @@ const AddDataModal = ({ isOpen, onClose, onSuccess }: ModalProps) => {
             TAMBAH JENIS DATA
           </h3>
         </div>
+
         <div className="p-8">
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 gap-6">
-              {/* Input jenis data */}
+              {/* Jenis Data */}
               <div>
-                <label htmlFor="jenis_data" className="block text-sm font-bold text-gray-700 mb-2">
-                  JENIS DATA:
+                <label
+                  htmlFor="jenis_data"
+                  className="block text-sm font-bold text-gray-700 mb-2"
+                >
+                  JENIS DATA
                 </label>
                 <Controller
                   name="jenis_data"
                   control={control}
-                  rules={{ required: 'Jenis data tidak boleh kosong' }}
+                  rules={{ required: "Jenis data tidak boleh kosong" }}
                   render={({ field }) => (
                     <input
                       {...field}
                       id="jenis_data"
                       type="text"
                       placeholder="Masukkan Nama Data"
-                      className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${errors.jenis_data ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                      className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${
+                        errors.jenis_data
+                          ? "border-red-500 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
+                      }`}
                     />
                   )}
                 />
-                {errors.jenis_data && <p className="text-red-500 text-sm mt-1">{errors.jenis_data.message}</p>}
+                {errors.jenis_data && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.jenis_data.message}
+                  </p>
+                )}
               </div>
 
-              {/* Input tahun */}
+              {/* Tahun */}
               <div>
-                <label htmlFor="tahun" className="block text-sm font-bold text-gray-700 mb-2">
-                  TAHUN:
+                <label
+                  htmlFor="tahun"
+                  className="block text-sm font-bold text-gray-700 mb-2"
+                >
+                  TAHUN
                 </label>
                 <Controller
                   name="tahun"
                   control={control}
-                  rules={{ required: 'Tahun tidak boleh kosong' }}
+                  rules={{ required: "Tahun tidak boleh kosong" }}
                   render={({ field }) => (
                     <Select
                       {...field}
-                      id="tahun"
+                      inputId="tahun"
                       options={yearOptions}
                       placeholder="Pilih Tahun"
                       isClearable
                       styles={{
                         control: (base, state) => ({
                           ...base,
-                          padding: '0.30rem',
-                          borderRadius: '0.375rem',
-                          borderColor: errors.tahun ? 'rgb(239 68 68)' : '#D1D5DB',
-                          '&:hover': {
-                            borderColor: errors.tahun ? 'rgb(239 68 68)' : '#D1D5DB',
+                          padding: "0.30rem",
+                          borderRadius: "0.375rem",
+                          borderColor: errors.tahun
+                            ? "rgb(239 68 68)"
+                            : "#D1D5DB",
+                          "&:hover": {
+                            borderColor: errors.tahun
+                              ? "rgb(239 68 68)"
+                              : "#D1D5DB",
                           },
-                          boxShadow: state.isFocused ? (errors.tahun ? '0 0 0 2px rgb(254 202 202)' : '0 0 0 2px rgb(191 219 254)') : 'none',
+                          boxShadow: state.isFocused
+                            ? errors.tahun
+                              ? "0 0 0 2px rgb(254 202 202)"
+                              : "0 0 0 2px rgb(191 219 254)"
+                            : "none",
                         }),
                       }}
                     />
                   )}
                 />
-                {errors.tahun && <p className="text-red-500 text-sm mt-1">{errors.tahun.message}</p>}
+                {errors.tahun && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.tahun.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -171,7 +192,7 @@ const AddDataModal = ({ isOpen, onClose, onSuccess }: ModalProps) => {
                 disabled={isSubmitting}
                 className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
               </button>
               <button
                 type="button"
