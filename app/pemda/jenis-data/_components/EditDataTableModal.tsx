@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Select from 'react-select';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => Promise<void>;
+  onSuccess: () => void;
   dataItem: any;
-  jenisDataId: string; 
+  jenisDataId?: string; 
 }
 
 const EditDataTableModal: React.FC<ModalProps> = ({
@@ -33,6 +34,10 @@ const EditDataTableModal: React.FC<ModalProps> = ({
       });
     }
   }, [dataItem]);
+
+  useEffect(() => {
+    console.log("data hasil parsing :", dataItem)
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -106,7 +111,7 @@ const EditDataTableModal: React.FC<ModalProps> = ({
               value={formData.instansi_produsen_data || ""}
               onChange={handleChange}
             />
-            <select
+            {/* <select
               className="w-full border p-2 rounded"
               name="tahun"
               value={formData.tahun || ""}
@@ -118,7 +123,7 @@ const EditDataTableModal: React.FC<ModalProps> = ({
                   {new Date().getFullYear() - index}
                 </option>
               ))}
-            </select>
+            </select> */}
             <input
               className="w-full border p-2 rounded"
               name="target"

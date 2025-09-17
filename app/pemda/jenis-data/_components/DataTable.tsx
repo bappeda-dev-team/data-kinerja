@@ -2,6 +2,7 @@
 
 'use client';
 import React, { useState } from 'react';
+import EditDataTableModal from './EditDataTableModal';
 
 const years = ['2020', '2021', '2022', '2023', '2024', '2025'];
 
@@ -29,9 +30,23 @@ type DataTableProps = {
   onDelete: (id: number) => void;
 };
 
-const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
+  const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
   const [openModal, setOpenModal] = useState(false);
   const [keterangan, setKeterangan] = useState('');
+
+  const [ModalEdit, setModalEdit] = useState<boolean>(false);
+  const [FetchTrigger, setFetchTrigger] = useState<boolean>(false);
+  const [DataModalEdit, setDataModalEdit] = useState<any>(null);
+
+  const handleModalEdit = (data: any) => {
+    if(ModalEdit){
+      setModalEdit(false);
+      setDataModalEdit(null);
+    } else {
+      setModalEdit(true);
+      setDataModalEdit(data);
+    }
+  }
 
   const handleOpenModal = (ket: string) => {
     setKeterangan(ket || '');
@@ -91,24 +106,25 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
                   {/* Bagian ini diubah untuk tombol gradasi */}
                   <td className="p-2 border border-gray-300 text-center">
                     <div className='flex flex-col items-center gap-2'> {/* Menggunakan flex-col untuk tombol vertikal */}
-                       <button
-                         onClick={() => onUpdate(row)}
-                         className="px-4 py-2 text-white rounded-lg
+                      <button
+                        // onClick={() => onUpdate(row)}
+                        onClick={() => handleModalEdit(row)}
+                        className="px-4 py-2 text-white rounded-lg
                                     bg-gradient-to-r from-green-400 to-green-600
                                     hover:from-green-500 hover:to-green-700
                                     transition-all duration-200 shadow-md w-full max-w-[100px]"
-                       >
-                         Edit
-                       </button>
-                       <button
-                         onClick={() => onDelete(row.id)}
-                         className="px-4 py-2 text-white rounded-lg
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => onDelete(row.id)}
+                        className="px-4 py-2 text-white rounded-lg
                                     bg-gradient-to-r from-red-500 to-red-700
                                     hover:from-red-600 hover:to-red-800
                                     transition-all duration-200 shadow-md w-full max-w-[100px]"
-                       >
-                         Hapus
-                       </button>
+                      >
+                        Hapus
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -154,6 +170,15 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
           </div>
         </div>
       )}
+      {/* modal edit */}
+      {ModalEdit && 
+        <EditDataTableModal 
+          isOpen={ModalEdit}
+          onClose={() => handleModalEdit(null)}
+          onSuccess={() => setFetchTrigger((prev) => !prev)}
+          dataItem={DataModalEdit}
+        />
+      }
     </div>
   );
 };
