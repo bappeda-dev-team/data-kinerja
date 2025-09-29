@@ -5,21 +5,24 @@ import Link from 'next/link'; // Import Link
 import JenisDataTable from '../jenis-data/_components/JenisDataTable';
 import AddDataModal from '../jenis-data/_components/AddDataModal'; 
 import PageHeader from '@/app/components/layout/PageHeader';
-
+import { FiHome } from 'react-icons/fi';
 const JenisDataPageOPD = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div>
-      <PageHeader />
+      {/* <PageHeader /> */}
       <div className="bg-white p-6 rounded-b-lg shadow-md border border-gray-300 border-t-0">
-        <div className="flex items-center text-sm text-gray-500 mb-4">
+        <div className="flex items-center mb-4">
           {/* Ikon rumah diganti dengan Link ke Dashboard */}
-          <Link href="/dashboard" className="hover:underline">Dashboard</Link>
-          <span className="mx-2">/</span>
+           <div className="flex items-center">
+                          <a href="/" className=""><FiHome size={16}/></a>
+                      </div>
+          <p className="mx-2">/</p>
           <Link href="/opd" className="hover:underline">OPD</Link>
-           <span className="mx-2">/</span>
-          <span className="font-semibold text-gray-800">Jenis Data</span>
+           <p className="mx-2">/</p>
+          <p className="font-semibold text-gray-1200">Jenis Data</p>
+          
         </div>
         
         <div className="flex justify-between items-center mb-4">

@@ -5,7 +5,7 @@ import ContentContainer from '../components/layout/ContentContainer';
 const DashboardPage = () => {
   return (
     <>
-      <PageHeader />
+      {/* <PageHeader /> */}
       <ContentContainer>
         <div className="pb-4">
           <p className="text-gray-700">Selamat Datang, Admin Pemda!</p>

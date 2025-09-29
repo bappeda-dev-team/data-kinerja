@@ -117,7 +117,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
 
   return (
     <div>
-      <PageHeader />
+      {/* <PageHeader /> */}
 
       <div className="bg-white p-6 rounded-b-lg shadow-md border border-gray-300 border-t-0">
         {/* Breadcrumb */}

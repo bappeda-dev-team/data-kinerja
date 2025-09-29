@@ -14,7 +14,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
   return (
      <div>
       {/* Menghapus prop 'title' dari sini */}
-      <PageHeader /> 
+      {/* <PageHeader />  */}
       <div className="bg-white p-6 rounded-b-lg shadow-md border border-gray-300 border-t-0">
         <div className="flex justify-between items-center mb-4">
             <div className="flex items-center text-sm text-gray-500">

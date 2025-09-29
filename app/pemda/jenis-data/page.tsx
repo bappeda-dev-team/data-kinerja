@@ -5,6 +5,7 @@ import Link from "next/link";
 import JenisDataTable from "./_components/JenisDataTable";
 import AddDataModal from "./_components/AddDataModal";
 import PageHeader from "@/app/components/layout/PageHeader";
+import { FiHome } from "react-icons/fi";
 
 // Tipe data untuk jenis data
 interface JenisData {
@@ -61,13 +62,13 @@ const JenisDataPagePemda = () => {
 
   return (
     <div>
-      <PageHeader />
+      {/* <PageHeader /> */}
       <div className="bg-white p-6 rounded-b-lg shadow-md border border-gray-300 border-t-0">
         {/* Breadcrumb */}
-        <div className="flex items-center text-sm text-gray-500 mb-4">
-          <Link href="/dashboard" className="hover:underline">
-            Dashboard
-          </Link>
+        <div className="flex items-center mb-4">
+          <div className="flex items-center">
+                <a href="/" className=""><FiHome size={16}/></a>
+            </div>
           <span className="mx-2">/</span>
           <Link href="/pemda" className="hover:underline">
             Pemda

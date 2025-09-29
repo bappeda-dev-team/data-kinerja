@@ -9,6 +9,7 @@ import Sidebar from '../app/components/layout/Sidebar';
 import { Menu } from 'lucide-react';
 
 import { Poppins } from 'next/font/google';
+import PageHeader from './components/layout/PageHeader';
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </header>
             
             <main className="p-4 md:p-6 lg:p-8 flex-1">
+            <PageHeader />
               {children}
             </main>
           </div>

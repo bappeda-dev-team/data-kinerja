@@ -17,6 +17,7 @@ interface OptionType {
 
 interface FormValue {
   jenis_data: string;
+  periode: OptionType | null;
   tahun: OptionType | null;
 }
 
@@ -35,8 +36,14 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const yearOptions: OptionType[] = Array.from({ length: 12 }, (_, i) => {
-    const year = 2019 + i;
+const periodOptions: OptionType[] = [
+  { label: "2020–2025", value: 2020 },
+  { label: "2026–2030", value: 2026 },
+  { label: "2031–2035", value: 2031 },
+];
+
+const yearOptions: OptionType[] = Array.from({ length: 12 }, (_, i) => {
+    const year = 2020 + i;
     return { label: `Tahun ${year}`, value: year };
   });
 
@@ -131,6 +138,54 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
                 {errors.jenis_data && (
                   <p className="text-red-500 text-sm mt-1">
                     {errors.jenis_data.message}
+                  </p>
+                )}
+              </div>
+
+<div>
+                <label
+                  htmlFor="periode"
+                  className="block text-sm font-bold text-gray-700 mb-2"
+                >
+                  PERIODE
+                </label>
+                <Controller
+                  name="periode"
+                  control={control}
+                  rules={{ required: "Periode tidak boleh kosong" }}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      inputId="periode"
+                      options={periodOptions}
+                      placeholder="Pilih Periode"
+                      isClearable
+                      styles={{
+                        control: (base, state) => ({
+                          ...base,
+                          padding: "0.30rem",
+                          borderRadius: "0.375rem",
+                          borderColor: errors.periode
+                            ? "rgb(239 68 68)"
+                            : "#D1D5DB",
+                          "&:hover": {
+                            borderColor: errors.periode
+                              ? "rgb(239 68 68)"
+                              : "#D1D5DB",
+                          },
+                          boxShadow: state.isFocused
+                            ? errors.periode
+                              ? "0 0 0 2px rgb(254 202 202)"
+                              : "0 0 0 2px rgb(191 219 254)"
+                            : "none",
+                        }),
+                      }}
+                    />
+                  )}
+                />
+                {errors.periode && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.periode.message}
                   </p>
                 )}
               </div>
