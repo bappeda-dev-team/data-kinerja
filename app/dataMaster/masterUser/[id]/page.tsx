@@ -1,6 +1,6 @@
 import { FiHome } from "react-icons/fi";
 import { FormEditUser } from "@/app/components/dataMaster/masterUser/FormUser";
-import { Link } from "lucide-react";
+import Link from "next/link";
 
 const editUser = () => {
     return(

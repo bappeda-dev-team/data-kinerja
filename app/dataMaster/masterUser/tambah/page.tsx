@@ -2,7 +2,7 @@ import Table from "@/app/components/dataMaster/masterUser/Table";
 import { ButtonSky } from "@/app/components/global/Button";
 import { TbCirclePlus } from "react-icons/tb";
 import { FiHome } from "react-icons/fi";
-import { Link } from "lucide-react";
+import Link from "next/link";
 
 const masteruser = () => {
     return(

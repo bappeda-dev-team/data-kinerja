@@ -4,7 +4,7 @@ import { FiHome } from "react-icons/fi";
 import Table from "@/app/components/dataMaster/masterPeriode/Table";
 import { ButtonSky } from "@/app/components/global/Button";
 import { TbPlus } from "react-icons/tb";
-import { Link } from "lucide-react";
+import Link from "next/link";
 
 const MasterPeriode = () => {
 
