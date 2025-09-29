@@ -53,35 +53,35 @@ const Table = () => {
 
     const token = getToken();
 
-    // useEffect(() => {
-    //     const API_URL = process.env.NEXT_PUBLIC_API_URL;
-    //     const fetchPeriode = async () => {
-    //         setLoading(true)
-    //         try {
-    //             const response = await fetch(`${API_URL}/periode/findall`, {
-    //                 headers: {
-    //                     Authorization: `${token}`,
-    //                     'Content-Type': 'application/json',
-    //                 },
-    //             });
-    //             const result = await response.json();
-    //             const data = result.data;
-    //             if (data == null || data.length == 0) {
-    //                 setDataNull(true);
-    //                 setPeriode([]);
-    //             } else {
-    //                 setDataNull(false);
-    //                 setPeriode(data);
-    //             }
-    //         } catch (err) {
-    //             setError(true);
-    //             console.error(err)
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     }
-    //     fetchPeriode();
-    // }, [token, FetchTrigger]);
+    useEffect(() => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL;
+        const fetchPeriode = async () => {
+            setLoading(true)
+            try {
+                const response = await fetch(`https://periode-service-test.zeabur.app/periode`, {
+                    headers: {
+                        Authorization: `${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const result = await response.json();
+                const data = result.data;
+                if (data == null || data.length == 0) {
+                    setDataNull(true);
+                    setPeriode([]);
+                } else {
+                    setDataNull(false);
+                    setPeriode(data);
+                }
+            } catch (err) {
+                setError(true);
+                console.error(err)
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchPeriode();
+    }, [token, FetchTrigger]);
 
     const handleModalNewPeriode = () => {
         if (isOpenNewPeriode) {

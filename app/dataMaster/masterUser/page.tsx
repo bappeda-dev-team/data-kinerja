@@ -2,12 +2,13 @@ import Table from "@/app/components/dataMaster/masterUser/Table";
 import { ButtonSky } from "@/app/components/global/Button";
 import { TbCirclePlus } from "react-icons/tb";
 import { FiHome } from "react-icons/fi";
+import { Link } from "lucide-react";
 
 const masteruser = () => {
     return(
         <>
             <div className="flex items-center mt-2">
-                <a href="/" className="mr-1"><FiHome /></a>
+                <Link href="/" className="mr-1"><FiHome /></Link>
                 <p className="mr-1">/ Data Master /</p>
                 <p className="mr-1 font-semibold text-gray-1200">Master User</p>
             </div>

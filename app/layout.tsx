@@ -1,4 +1,3 @@
-// src/app/layout.tsx (UPDATED)
 'use client'; 
 
 import { useState, ReactNode } from 'react';

@@ -4,12 +4,13 @@ import { FiHome } from "react-icons/fi";
 import { TbCirclePlus } from "react-icons/tb";
 import { ButtonSky } from "@/app/components/global/Button";
 import Table from "@/app/components/dataMaster/masterOpd/Table";
+import Link from "next/link";
 
 const MasterOpd = () => {
   return (
     <>
       <div className="flex items-center mt-2">
-        <a href="/" className="mr-1"><FiHome /></a>
+        <Link href="/" className="mr-1"><FiHome /></Link>
         <p className="mr-1">/ Data Master /</p>
         <p className="mr-1 font-semibold text-gray-1200">Master OPD</p>
       </div>

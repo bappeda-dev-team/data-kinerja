@@ -67,7 +67,7 @@ const JenisDataPagePemda = () => {
         {/* Breadcrumb */}
         <div className="flex items-center mb-4">
           <div className="flex items-center">
-                <a href="/" className=""><FiHome size={16}/></a>
+                <Link href="/" className=""><FiHome size={16}/></Link>
             </div>
           <span className="mx-2">/</span>
           <Link href="/pemda" className="hover:underline">

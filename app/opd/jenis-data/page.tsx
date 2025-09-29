@@ -16,7 +16,7 @@ const JenisDataPageOPD = () => {
         <div className="flex items-center mb-4">
           {/* Ikon rumah diganti dengan Link ke Dashboard */}
            <div className="flex items-center">
-                          <a href="/" className=""><FiHome size={16}/></a>
+                          <Link href="/" className=""><FiHome size={16}/></Link>
                       </div>
           <p className="mx-2">/</p>
           <Link href="/opd" className="hover:underline">OPD</Link>

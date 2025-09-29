@@ -1,11 +1,12 @@
 import { FiHome } from "react-icons/fi";
 import { FormEditMasterOpd } from "@/app/components/dataMaster/masterOpd/FormMasterOpd";
+import { Link } from "lucide-react";
 
-const EditOpd = () => {
+const editOpd = () => {
     return(
         <>
             <div className="flex items-center mb-3">
-                <a href="/" className="mr-1"><FiHome /></a>
+                <Link href="/" className="mr-1"><FiHome /></Link>
                 <p className="mr-1">/ Perencanaan</p>
                 <p className="mr-1">/ Data Master</p>
                 <p className="mr-1">/ Master OPD</p>
@@ -16,4 +17,4 @@ const EditOpd = () => {
     )
 }
 
-export default EditOpd;
+export default editOpd;
