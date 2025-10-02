@@ -1,128 +1,149 @@
-import * as jwtDecoded from "jwt-decode";
+// app/components/lib/Cookie.ts
 import { AlertNotification } from "../global/Alert";
 
-// Fungsi untuk menyimpan nilai ke cookies
-export const setCookie = (name: string, value: any) => {
-    document.cookie = `${name}=${value}; path=/;`;
+// ==========================
+// Utilities: Cookie helpers
+// ==========================
+type CookieOptions = {
+  path?: string;
+  maxAge?: number; // detik
+  expires?: Date;
+  sameSite?: "lax" | "strict" | "none" | "Lax" | "Strict" | "None";
+  secure?: boolean;
 };
 
-export const getCookie = (name: string): string | null => {
-  if (typeof document === 'undefined') {
-    // Jika di server-side, kembalikan null atau nilai default lainnya
-    return null;
-  }
+// NOTE: hanya dipakai di client. Jangan panggil di server.
+export const setCookie = (name: string, value: string, opts: CookieOptions = {}) => {
+  if (typeof document === "undefined") return;
 
+  const {
+    path = "/",
+    sameSite = "Lax",
+    secure = process.env.NODE_ENV === "production",
+    maxAge,
+    expires,
+  } = opts;
+
+  let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=${path}; SameSite=${sameSite}`;
+  if (secure) cookie += "; Secure";
+  if (typeof maxAge === "number") cookie += `; Max-Age=${maxAge}`;
+  if (expires instanceof Date) cookie += `; Expires=${expires.toUTCString()}`;
+
+  document.cookie = cookie;
+};
+
+// SSR-safe getter
+export const getCookie = (name: string): string | null => {
+  if (typeof document === "undefined") return null;
+  const target = `; ${encodeURIComponent(name)}=`;
   const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  const parts = value.split(target);
+  if (parts.length === 2) {
+    const raw = parts.pop()!.split(";").shift()!;
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }
   return null;
 };
 
-export const login = async (username: string, password: string): Promise<boolean> => {
-  try {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL;
-    const response = await fetch(`${API_URL}/user/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    const data = await response.json();
-    if (data.code === 200) {
-      // console.log('data dari response : ,', data);
-      const token = data.data.token;
-      try {
-        const decoded = jwtDecoded.jwtDecode(token);
-        // Simpan token di cookie
-        document.cookie = `token=${token}; path=/;`;
-        document.cookie = `user=${JSON.stringify(decoded)}; path=/;`;
-        AlertNotification("Login Berhasil", "" , "success", 1000)
-        return true;
-      } catch (decodeError) {
-        AlertNotification("Login Gagal", `${data.data}` , "error", 1000)
-        console.error('Error decoding token:', data.code);
-        return false;
-      }
-    } else if (data.code === 400) {
-        AlertNotification("Login Gagal", `${data.data}` , "error", 1000)
-        return false;
-      } else {
-        console.log(`Login gagal: Status ${data.data}`);
-        return false;
-      }
-    } catch (err) {
-      AlertNotification("Login Gagal", "terdapat kesalahan server / koneksi internet" , "error", 2000)
-      console.error('Login gagal dengan error:', err);
-    return false;
-  }
+export const removeCookie = (name: string, path = "/") => {
+  if (typeof document === "undefined") return;
+  // Set expired
+  document.cookie = `${encodeURIComponent(name)}=; Path=${path}; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 };
+
+// ==================================
+// Auth helpers: login / logout / get
+// ==================================
+
+// Tipe respons agar aman saat akses properti
+type LoginResponse =
+  | { code: number; data: { token?: string; user?: unknown } }
+  | { code: number; data: string };
+
+export async function login(username: string, password: string): Promise<void> {
+  const API_LOGIN = process.env.NEXT_PUBLIC_API_URL;
+  const res = await fetch(`${API_LOGIN}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  })
+
+  if (!res.ok) {
+    throw new Error("Login gagal")
+  } else {
+    const data = await res.json();
+    AlertNotification("Berhasil Login", "", "success", 2000);
+    localStorage.setItem("sessionId", data.sessionId)
+  
+    // cookie buat middleware
+    document.cookie = `sessionId=${data.sessionId}; path=/; secure; samesite=strict`
+  }
+
+}
 
 export const logout = () => {
-  // Hapus token dari localStorage
-  localStorage.removeItem('token');
-  localStorage.removeItem('opd');
-  localStorage.removeItem('user');
-  localStorage.removeItem('periode');
+  // Hapus cookies yang dipakai middleware
+  removeCookie("sessionId", "/");     // ⬅️ TAMBAHKAN INI
+  removeCookie("token", "/");
+  removeCookie("user", "/");
+  removeCookie("opd", "/");
+  removeCookie("periode", "/");
+  removeCookie("tahun", "/");
 
-  // Hapus semua cookie yang terkait
-  document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
-  document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
-  document.cookie = 'opd=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+  // (opsional) bersih-bersih localStorage
+  try {
+    localStorage.removeItem("sessionId"); // ⬅️ TAMBAHKAN INI
+    localStorage.removeItem("token");
+    localStorage.removeItem("opd");
+    localStorage.removeItem("user");
+    localStorage.removeItem("periode");
+  } catch {}
 
-  // Redirect ke halaman login
-  window.location.href = '/login';
+  // Redirect ke login
+  if (typeof window !== "undefined") {
+    window.location.href = "/login";
+  }
 };
 
+
+// Helpers pembacaan
 export const getUser = () => {
-  const get_user = getCookie("user");
-  if(get_user){
-    return {
-      user: JSON.parse(get_user)
-    };
+  const raw = getCookie("user");
+  if (!raw) return undefined;
+  try {
+    return { user: JSON.parse(raw) };
+  } catch {
+    return undefined;
   }
-}
+};
 
 export const getToken = () => {
-  const get_Token = getCookie("token")
-  if (get_Token) {
-    return get_Token;
-  }
-  return null;
-}
+  const t = getCookie("token");
+  return t ?? null;
+};
 
 export const getOpdTahun = () => {
-  const get_tahun = getCookie("tahun");
-  const get_opd = getCookie("opd");
-
-  if (get_tahun && get_opd) {
-    return {
-      tahun: JSON.parse(get_tahun),
-      opd: JSON.parse(get_opd)
-    };
-  }
-
-  if (get_tahun) {
-    return { tahun: JSON.parse(get_tahun), opd: null };
-  }
-
-  if (get_opd) {
-    return { tahun: null, opd: JSON.parse(get_opd) };
-  }
-
-  return { tahun: null, opd: null };
+  const tRaw = getCookie("tahun");
+  const oRaw = getCookie("opd");
+  let tahun: any = null;
+  let opd: any = null;
+  try {
+    if (tRaw) tahun = JSON.parse(tRaw);
+  } catch { }
+  try {
+    if (oRaw) opd = JSON.parse(oRaw);
+  } catch { }
+  return { tahun, opd };
 };
 
 export const getPeriode = () => {
-  const get_periode = getCookie("periode");
-
-  if (get_periode) {
-    return {
-      periode: JSON.parse(get_periode)
-    };
-  } else {
-    return { periode: null };
-  }
-
+  const pRaw = getCookie("periode");
+  try {
+    if (pRaw) return { periode: JSON.parse(pRaw) };
+  } catch { }
+  return { periode: null };
 };
