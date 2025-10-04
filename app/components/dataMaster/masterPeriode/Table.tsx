@@ -1,190 +1,231 @@
-'use client'
+'use client';
 
-import { ButtonGreen, ButtonRed, ButtonSky } from "@/app/components/global/Button";
-import React, { useEffect, useState } from "react";
-import { LoadingClip } from "@/app/components/global/Loading";
-import { AlertNotification, AlertQuestion } from "@/app/components/global/Alert";
-import { getToken, getUser } from "@/app/components/lib/Cookie";
-import { TbPencil, TbTrash, TbPlus } from "react-icons/tb";
-import { ModalPeriode } from "./ModalPeriode";
+import React, { useEffect, useState } from 'react';
+import { ButtonSky } from '@/app/components/global/Button';
+import { LoadingClip } from '@/app/components/global/Loading';
+import { AlertNotification } from '@/app/components/global/Alert';
+import { getToken, getCookie } from '@/app/components/lib/Cookie';
+import { TbPencil, TbTrash, TbPlus } from 'react-icons/tb';
+import { ModalPeriode } from './ModalPeriode';
 
-interface Periode {
-    id: number;
-    tahun_awal: string;
-    tahun_akhir: string;
-    // tahun_list: string;
-    jenis_periode: string;
-}
-//Data Dummy
-const DataPeriode: Periode[] =
-[
-  {
-    "id": 1,
-    "tahun_awal": '2025',
-    "tahun_akhir": '2030',
-    "jenis_periode": "RPJMD"
-  },
-  {
-    "id": 2,
-    "tahun_awal": '2031',
-    "tahun_akhir": '2036',
-    "jenis_periode": "RPJMD"
-  },
-  {
-    "id": 3,
-    "tahun_awal": '2020',
-    "tahun_akhir": '2024',
-    "jenis_periode": "RPJMD"
-  }
-];
+type Periode = {
+  id: number;
+  tahun_awal: string | number;
+  tahun_akhir: string | number;
+  jenis_periode: string;
+};
+
+const ENDPOINT = {
+  FIND_ALL: 'https://testapi.kertaskerja.cc/api/v1/perencanaan/periode/findall',
+  DELETE: (id: number) =>
+    `https://testapi.kertaskerja.cc/api/v1/perencanaan/periode/delete/${id}`,
+};
+
+// Headers builder: selalu valid, dan pakai Bearer
+const buildHeaders = (rawToken?: string | null): HeadersInit => {
+  const h = new Headers();
+  h.set('Accept', 'application/json');
+  // GET gak butuh Content-Type, tapi aman kalau ada:
+  h.set('Content-Type', 'application/json');
+  if (rawToken) h.set('Authorization', `Bearer ${rawToken}`);
+  return h;
+};
 
 const Table = () => {
+  const [rows, setRows] = useState<Periode[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const [Periode, setPeriode] = useState<Periode[]>([]);
-    
-    const [isOpenNewPeriode, setIsOpenNewPeriode] = useState<boolean>(false);
-    const [isOpenEditPeriode, setIsOpenEditPeriode] = useState<boolean>(false);
-    const [IdPeriode, setIdPeriode] = useState<number>(0);
+  // Ambil token; fallback ke sessionId kalau kamu memang simpan itu
+  const authToken = getToken() || getCookie('sessionId') || null;
 
-    const [Error, setError] = useState<boolean | null>(null);
-    const [DataNull, setDataNull] = useState<boolean | null>(null);
-    const [Loading, setLoading] = useState<boolean | null>(null);
-    const [FetchTrigger, setFetchTrigger] = useState<boolean>(false);
+  const fetchAll = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(ENDPOINT.FIND_ALL, {
+        headers: buildHeaders(authToken),
+        cache: 'no-store',
+      });
 
-    const token = getToken();
+      const ct = res.headers.get('content-type') || '';
+      const raw = await res.text();
 
-    useEffect(() => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL;
-        const fetchPeriode = async () => {
-            setLoading(true)
-            try {
-                const response = await fetch(`https://periode-service-test.zeabur.app/periode`, {
-                    headers: {
-                        Authorization: `${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
-                const result = await response.json();
-                const data = result.data;
-                if (data == null || data.length == 0) {
-                    setDataNull(true);
-                    setPeriode([]);
-                } else {
-                    setDataNull(false);
-                    setPeriode(data);
-                }
-            } catch (err) {
-                setError(true);
-                console.error(err)
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchPeriode();
-    }, [token, FetchTrigger]);
+      // Kalau server redirect/401 → biasanya balas HTML
+      if (!ct.includes('application/json')) {
+        console.error('Non-JSON response', { status: res.status, raw: raw.slice(0, 200) });
+        throw new Error('Non-JSON response');
+      }
 
-    const handleModalNewPeriode = () => {
-        if (isOpenNewPeriode) {
-            setIsOpenNewPeriode(false);
-        } else {
-            setIsOpenNewPeriode(true);
-        }
+      if (!res.ok) {
+        console.error('!res.ok', res.status, raw.slice(0, 200));
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const payload = JSON.parse(raw);
+      const data: any[] = Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload)
+        ? payload
+        : [];
+
+      setRows(
+        data.map((d: any) => ({
+          id: Number(d.id),
+          tahun_awal: d.tahun_awal,
+          tahun_akhir: d.tahun_akhir,
+          jenis_periode: d.jenis_periode ?? 'RPJMD',
+        }))
+      );
+    } catch (e) {
+      setRows([]);
+      setError('Periksa koneksi / server API');
+    } finally {
+      setLoading(false);
     }
-    const handleModalEditPeriode = (id: number) => {
-        if (isOpenEditPeriode) {
-            setIsOpenEditPeriode(false);
-            setIdPeriode(0);
-        } else {
-            setIsOpenEditPeriode(true);
-            setIdPeriode(id);
-        }
+  };
+
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authToken]);
+
+  const [openCreate, setOpenCreate] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [currentRow, setCurrentRow] = useState<Periode | null>(null);
+
+  const onOpenCreate = () => setOpenCreate(true);
+  const onOpenEdit = (row: Periode) => {
+    setCurrentRow(row);
+    setOpenEdit(true);
+  };
+
+  const onDelete = async (id: number) => {
+    if (!confirm('Hapus data periode ini?')) return;
+    try {
+      const res = await fetch(ENDPOINT.DELETE(id), {
+        method: 'DELETE',
+        headers: buildHeaders(authToken),
+      });
+      const body = await res.text();
+      if (!res.ok) {
+        console.error('Delete failed:', res.status, body.slice(0, 200));
+        AlertNotification('Gagal', 'Gagal menghapus data (response !ok).', 'error', 1800);
+        return;
+      }
+      AlertNotification('Berhasil', 'Data Periode dihapus', 'success', 1000);
+      fetchAll();
+    } catch (err) {
+      AlertNotification('Gagal', 'Cek koneksi internet / server API', 'error', 1800);
     }
+  };
 
-    const hapusPeriode = async (id: number) => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL;
-        // console.log(id);
-        try {
-            const response = await fetch(`${API_URL}/periode/delete/${id}`, {
-                method: "DELETE",
-                headers: {
-                    Authorization: `${token}`,
-                    'Content-Type': 'application/json',
-                },
-            })
-            if (!response.ok) {
-                alert("response !ok saat hapus data Periode")
-            }
-            AlertNotification("Berhasil", "Data Periode Berhasil Dihapus", "success", 1000);
-            setFetchTrigger((prev) => !prev);
-        } catch (err) {
-            AlertNotification("Gagal", "cek koneksi internet atau database server", "error", 2000);
-            console.error(err);
-        }
-    };
-
-    if (Loading) {
-        return (
-            <div className="border p-5 rounded-xl shadow-xl">
-                <LoadingClip className="mx-5 py-5" />
-            </div>
-        );
-    } else if (Error) {
-        return (
-            <div className="border p-5 rounded-xl shadow-xl">
-                <h1 className="text-red-500 font-bold mx-5 py-5">Periksa koneksi internet atau database server</h1>
-            </div>
-        )
-    }
-
+  if (loading) {
     return (
-        <>
-            <div className="flex items-center justify-between border-b px-5 py-5">
-                <h1 className="uppercase font-bold">Data Master Periode</h1>
-                {/* <ButtonSky onClick={handleModalNewPeriode}>
-                    <TbPlus className="mr-1 " />
-                    Tambah Periode
-                </ButtonSky> */}
-            </div>
-            <div className="overflow-auto m-2 rounded-t-xl border">
-                <table className="w-full">
-                    <thead>
-  <tr className="bg-gray-500 text-white">
-    <th className="border-r border-b py-3 text-center">No</th>
-    <th className="border-r border-b px-6 py-3 min-w-[100px]">Tahun Awal</th>
-    <th className="border-r border-b px-6 py-3 min-w-[100px]">Tahun Akhir</th>
-    <th className="border-b px-6 py-3 min-w-[100px]">Jenis Periode</th>
-  </tr>
-</thead>
-<tbody>
-  {DataPeriode.map((item, index) => (
-    <tr key={item.id}>
-      <td className="border-r border-b px-6 py-4 text-center">{index + 1}</td>
-      <td className="border-r border-b px-6 py-4 text-center">{item.tahun_awal}</td>
-      <td className="border-r border-b px-6 py-4 text-center">{item.tahun_akhir}</td>
-      <td className="border-b px-6 py-4 text-center">{item.jenis_periode}</td>
-    </tr>
-  ))}
-</tbody>
+      <div className="border p-5 rounded-xl shadow-xl">
+        <LoadingClip className="mx-5 py-5" />
+      </div>
+    );
+  }
 
-                </table>
-                {/* MODAL EDIT PERIODE */}
-                <ModalPeriode
-                    metode="baru"
-                    isOpen={isOpenNewPeriode}
-                    onClose={() => handleModalNewPeriode()}
-                    onSuccess={() => setFetchTrigger((prev) => !prev)}
-                />
-                {/* MODAL EDIT PERIODE */}
-                <ModalPeriode
-                    metode="lama"
-                    id={IdPeriode}
-                    isOpen={isOpenEditPeriode}
-                    onClose={() => handleModalEditPeriode(0)}
-                    onSuccess={() => setFetchTrigger((prev) => !prev)}
-                />
-            </div>
-        </>
-    )
-}
+  if (error) {
+    return (
+      <div className="border p-5 rounded-xl shadow-xl">
+        <h1 className="text-red-500 font-bold mx-5 py-5">{error}</h1>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between border-b px-5 py-5">
+        <h1 className="uppercase font-bold">Data Master Periode</h1>
+        <ButtonSky onClick={onOpenCreate}>
+          <TbPlus className="mr-1" />
+          Tambah Periode
+        </ButtonSky>
+      </div>
+
+      <div className="overflow-auto m-2 rounded-t-xl border">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-500 text-white">
+              <th className="border-r border-b py-3 text-center">No</th>
+              <th className="border-r border-b px-6 py-3 min-w-[100px]">Tahun Awal</th>
+              <th className="border-r border-b px-6 py-3 min-w-[100px]">Tahun Akhir</th>
+              <th className="border-r border-b px-6 py-3 min-w-[120px]">Jenis Periode</th>
+              <th className="border-b px-6 py-3 min-w-[160px] text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-6">
+                  Belum ada data
+                </td>
+              </tr>
+            ) : (
+              rows.map((item, idx) => (
+                <tr key={item.id}>
+                  <td className="border-r border-b px-6 py-4 text-center">{idx + 1}</td>
+                  <td className="border-r border-b px-6 py-4 text-center">{item.tahun_awal}</td>
+                  <td className="border-r border-b px-6 py-4 text-center">{item.tahun_akhir}</td>
+                  <td className="border-r border-b px-6 py-4 text-center">{item.jenis_periode}</td>
+                  <td className="border-b px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => onOpenEdit(item)}
+                        className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
+                        title="Edit"
+                      >
+                        <TbPencil />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => onDelete(item.id)}
+                        className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
+                        title="Hapus"
+                      >
+                        <TbTrash />
+                        Hapus
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+
+        {/* MODAL TAMBAH */}
+        <ModalPeriode
+          metode="baru"
+          isOpen={openCreate}
+          onClose={() => setOpenCreate(false)}
+          onSuccess={() => {
+            setOpenCreate(false);
+            fetchAll();
+          }}
+        />
+
+        {/* MODAL EDIT */}
+        <ModalPeriode
+          metode="lama"
+          isOpen={openEdit}
+          onClose={() => {
+            setOpenEdit(false);
+            setCurrentRow(null);
+          }}
+          current={currentRow || undefined}
+          onSuccess={() => {
+            setOpenEdit(false);
+            setCurrentRow(null);
+            fetchAll();
+          }}
+        />
+      </div>
+    </>
+  );
+};
 
 export default Table;
