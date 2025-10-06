@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import type { DataKinerja } from "../[slug]/DetailClientPage";
 
-const years = ["2020", "2021", "2022", "2023", "2024", "2025"];
+const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030", "2031", "2032", "2033", "2034", "2035", "2036"];
 
 type DataTableProps = {
   dataList?: DataKinerja[];

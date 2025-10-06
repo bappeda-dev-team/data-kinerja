@@ -26,7 +26,6 @@ const API_OPD =
 // ==================
 // HELPERS
 // ==================
-// Terima string | null | undefined supaya cocok dengan getCookie()
 const safeParseOption = (v: string | null | undefined): OptionTypeString | null => {
   if (!v) return null;
   try {
@@ -39,10 +38,8 @@ const safeParseOption = (v: string | null | undefined): OptionTypeString | null 
 };
 
 const PageHeader = () => {
-  // Cegah mismatch SSR vs client
   const [isClient, setIsClient] = useState(false);
 
-  // Data pilihan dari API
   const [dinasOptions, setDinasOptions] = useState<OptionTypeString[]>([]);
   const [loadingDinas, setLoadingDinas] = useState(false);
   const [dinasError, setDinasError] = useState<string | null>(null);
@@ -51,12 +48,10 @@ const PageHeader = () => {
   const [loadingPeriode, setLoadingPeriode] = useState(false);
   const [periodeError, setPeriodeError] = useState<string | null>(null);
 
-  // Pilihan aktif (mulai dari nilai netral; cookie disinkronkan SETELAH mount)
   const [selectedDinas, setSelectedDinas] = useState<OptionTypeString | null>(null);
   const [selectedPeriode, setSelectedPeriode] = useState<OptionTypeString | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>("");
 
-  // Client mount + sync cookie -> state
   useEffect(() => {
     setIsClient(true);
 
@@ -69,7 +64,6 @@ const PageHeader = () => {
     if (yCookie) setSelectedYear(yCookie);
   }, []);
 
-  // Fetch OPD & Periode (client only)
   useEffect(() => {
     if (!isClient) return;
 
@@ -106,7 +100,6 @@ const PageHeader = () => {
           label: `${it.tahun_awal}-${it.tahun_akhir}`,
         }));
 
-        // urutkan desc by tahun awal
         options.sort((a, b) => {
           const sa = Number(a.label.split("-")[0]);
           const sb = Number(b.label.split("-")[0]);
@@ -126,7 +119,7 @@ const PageHeader = () => {
     fetchPeriodeOptions();
   }, [isClient]);
 
-  // Persist pilihan ke cookie (client only)
+  // persist cookies
   useEffect(() => {
     if (!isClient) return;
     if (selectedDinas) setCookie("selectedDinas", JSON.stringify(selectedDinas));
@@ -138,7 +131,7 @@ const PageHeader = () => {
     if (selectedPeriode) setCookie("selectedPeriode", JSON.stringify(selectedPeriode));
     else {
       Cookies.remove("selectedPeriode");
-      setSelectedYear(""); // reset tahun kalau periode dihapus
+      setSelectedYear("");
     }
   }, [isClient, selectedPeriode]);
 
@@ -148,7 +141,6 @@ const PageHeader = () => {
     else Cookies.remove("selectedYear");
   }, [isClient, selectedYear]);
 
-  // Opsi tahun dari periode (NO setState di sini)
   const yearOptions: OptionTypeString[] = useMemo(() => {
     if (!selectedPeriode) return [];
     const [startStr, endStr] = selectedPeriode.label.split("-");
@@ -162,7 +154,6 @@ const PageHeader = () => {
     return arr;
   }, [selectedPeriode]);
 
-  // Validasi tahun saat periode berubah (jangan di useMemo)
   useEffect(() => {
     if (!selectedPeriode) {
       if (selectedYear) setSelectedYear("");
@@ -174,20 +165,36 @@ const PageHeader = () => {
     const end = Number(endStr);
     const ny = Number(selectedYear);
     if (Number.isNaN(ny) || ny < start || ny > end) setSelectedYear("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPeriode]);
+  }, [selectedPeriode]); // eslint-disable-line
 
   const selectedYearOption = selectedYear
     ? { value: selectedYear, label: `Tahun ${selectedYear}` }
     : null;
 
-  // Action tombol
+  // =========================
+  // AKTIFKAN: Tahun OPSIONAL
+  // =========================
   const handleActivate = () => {
-    if (!selectedDinas || !selectedPeriode || !selectedYear) {
-      AlertNotification("Gagal", "Harap pilih Dinas, Periode, dan Tahun terlebih dahulu", "error");
+    if (!selectedDinas || !selectedPeriode) {
+      AlertNotification(
+        "Gagal",
+        "Harap pilih Dinas dan Periode terlebih dahulu",
+        "error"
+      );
       return;
     }
-    AlertNotification("Berhasil", "Filter berhasil diaktifkan", "success", 1500);
+
+    // tahun opsional: kalau kosong, pastikan hapus cookie tahun
+    if (!selectedYear) {
+      Cookies.remove("selectedYear");
+    }
+
+    AlertNotification(
+      "Berhasil",
+      selectedYear ? "Filter (dengan Tahun) diaktifkan" : "Filter Periode diaktifkan",
+      "success",
+      1500
+    );
     setTimeout(() => {
       window.location.reload();
     }, 1500);
@@ -197,7 +204,6 @@ const PageHeader = () => {
     <div className="bg-filter-bar-bg p-3 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-3 text-white w-full md:w-auto">
         <h2 className="text-lg font-semibold">
-          {/* Stabilkan header saat hydrate: SSR & first client render sama */}
           {isClient ? (selectedDinas?.label ?? "Pilih Dinas/OPD") : "Pilih Dinas/OPD"}
         </h2>
       </div>
@@ -235,7 +241,7 @@ const PageHeader = () => {
               isClearable
             />
 
-            {/* TAHUN */}
+            {/* TAHUN (opsional) */}
             <Select<OptionTypeString, false>
               instanceId="select-tahun"
               name="tahun"
