@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ButtonSky } from '@/app/components/global/Button';
 import { LoadingClip } from '@/app/components/global/Loading';
 import { AlertNotification } from '@/app/components/global/Alert';
-import { getToken, getCookie } from '@/app/components/lib/Cookie';
+import { getSessionId } from '@/app/components/lib/Cookie';
 import { TbPencil, TbTrash, TbPlus } from 'react-icons/tb';
 import { ModalPeriode } from './ModalPeriode';
 
@@ -15,6 +15,7 @@ type Periode = {
   jenis_periode: string;
 };
 
+// TODO: gunakan value dari NEXT_PUBLIC_API
 const ENDPOINT = {
   FIND_ALL: 'https://testapi.kertaskerja.cc/api/v1/perencanaan/periode/findall',
   DELETE: (id: number) =>
@@ -22,12 +23,16 @@ const ENDPOINT = {
 };
 
 // Headers builder: selalu valid, dan pakai Bearer
-const buildHeaders = (rawToken?: string | null): HeadersInit => {
+// semua request pakai X-Session-Id untuk authorization
+// kecuali login
+const buildHeaders = (rawToken: string): HeadersInit => {
   const h = new Headers();
   h.set('Accept', 'application/json');
-  // GET gak butuh Content-Type, tapi aman kalau ada:
   h.set('Content-Type', 'application/json');
-  if (rawToken) h.set('Authorization', `Bearer ${rawToken}`);
+  // ambil dari cookies.tsx, di localstorage sessionId
+  h.set('X-Session-Id', rawToken);
+  // TODO hapus if dibawah
+  // if (rawToken) h.set('Authorization', `Bearer ${rawToken}`);
   return h;
 };
 
@@ -37,7 +42,7 @@ const Table = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Ambil token; fallback ke sessionId kalau kamu memang simpan itu
-  const authToken = getToken() || getCookie('sessionId') || null;
+  const authToken = getSessionId();
 
   const fetchAll = async () => {
     setLoading(true);
