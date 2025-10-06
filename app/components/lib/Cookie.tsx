@@ -126,6 +126,11 @@ export const getToken = () => {
   return t ?? null;
 };
 
+export const getSessionId = () => {
+  const t = localStorage.getItem("sessionId")
+  return t ?? '-';
+}
+
 export const getOpdTahun = () => {
   const tRaw = getCookie("tahun");
   const oRaw = getCookie("opd");
