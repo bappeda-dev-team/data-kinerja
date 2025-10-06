@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ButtonSky } from '@/app/components/global/Button';
 import { LoadingClip } from '@/app/components/global/Loading';
 import { AlertNotification } from '@/app/components/global/Alert';
@@ -15,36 +15,40 @@ type Periode = {
   jenis_periode: string;
 };
 
-// TODO: gunakan value dari NEXT_PUBLIC_API
 const ENDPOINT = {
   FIND_ALL: 'https://testapi.kertaskerja.cc/api/v1/perencanaan/periode/findall',
   DELETE: (id: number) =>
     `https://testapi.kertaskerja.cc/api/v1/perencanaan/periode/delete/${id}`,
 };
 
-// Headers builder: selalu valid, dan pakai Bearer
-// semua request pakai X-Session-Id untuk authorization
-// kecuali login
-const buildHeaders = (rawToken: string): HeadersInit => {
-  const h = new Headers();
-  h.set('Accept', 'application/json');
-  h.set('Content-Type', 'application/json');
-  // ambil dari cookies.tsx, di localstorage sessionId
-  h.set('X-Session-Id', rawToken);
-  // TODO hapus if dibawah
-  // if (rawToken) h.set('Authorization', `Bearer ${rawToken}`);
+// headers helper: set X-Session-Id hanya jika ada
+const buildHeaders = (rawToken?: string | null): Record<string, string> => {
+  const h: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  };
+  if (rawToken) h['X-Session-Id'] = rawToken;
   return h;
 };
 
-const Table = () => {
+export default function Table() {
   const [rows, setRows] = useState<Periode[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Ambil token; fallback ke sessionId kalau kamu memang simpan itu
-  const authToken = getSessionId();
+  // ⬇️ Ambil sessionId SETELAH mount (hindari localStorage di server)
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      setAuthToken(getSessionId() ?? null);
+    } catch {
+      setAuthToken(null);
+    }
+  }, []);
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
+    if (!authToken) return; // belum ada token → jangan fetch dulu
+
     setLoading(true);
     setError(null);
     try {
@@ -56,12 +60,10 @@ const Table = () => {
       const ct = res.headers.get('content-type') || '';
       const raw = await res.text();
 
-      // Kalau server redirect/401 → biasanya balas HTML
       if (!ct.includes('application/json')) {
         console.error('Non-JSON response', { status: res.status, raw: raw.slice(0, 200) });
         throw new Error('Non-JSON response');
       }
-
       if (!res.ok) {
         console.error('!res.ok', res.status, raw.slice(0, 200));
         throw new Error(`HTTP ${res.status}`);
@@ -88,12 +90,11 @@ const Table = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authToken]);
 
   useEffect(() => {
     fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authToken]);
+  }, [fetchAll]);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -120,10 +121,19 @@ const Table = () => {
       }
       AlertNotification('Berhasil', 'Data Periode dihapus', 'success', 1000);
       fetchAll();
-    } catch (err) {
+    } catch {
       AlertNotification('Gagal', 'Cek koneksi internet / server API', 'error', 1800);
     }
   };
+
+  if (!authToken) {
+    // opsional: skeleton saat nunggu token dari localStorage
+    return (
+      <div className="border p-5 rounded-xl shadow-xl">
+        <LoadingClip className="mx-5 py-5" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -231,6 +241,4 @@ const Table = () => {
       </div>
     </>
   );
-};
-
-export default Table;
+}
