@@ -25,7 +25,7 @@ const JenisDataPagePemda = () => {
         try {
             // const res = await fetch("https://alurkerja.zeabur.app/jenisdata");
             /// pakai testapi, cek di proxy (rewrites) next.config.ts
-            const res = await fetch("/api/alur-kerja/jenisdata", {
+            const res = await fetch("https://testapi.kertaskerja.cc/api/v1/alur-kerja/jenisdata", {
                 method: "GET",
                 headers: {
                     "X-Session-Id": authToken,
