@@ -5,11 +5,6 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const sessionId = request.cookies.get('sessionId')?.value
 
-  // TODO: hapus nanti
-  // if (!sessionId && !pathname.startsWith('/login')) {
-  //   return NextResponse.redirect(new URL('/login', request.url))
-  // }
-
   if (sessionId && pathname.startsWith('/login')) {
     return NextResponse.redirect(new URL('/', request.url))
   }

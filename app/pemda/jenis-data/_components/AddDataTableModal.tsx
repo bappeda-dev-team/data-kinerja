@@ -225,7 +225,7 @@ const AddDataTableModal = ({
               <SelectField
                 control={control}
                 name="jenis_data_id"
-                label="Jenis Data"
+                label="Jenis Kelompok Data"
                 options={jenisDataOptions}
                 error={errors.jenis_data_id?.message}
                 isLoading={isLoadingJenisData}

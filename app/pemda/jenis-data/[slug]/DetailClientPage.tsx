@@ -43,7 +43,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const fetchData = async () => {
     try {
       const res = await fetch(
-        `https://alurkerja.zeabur.app/datakinerjapemda/list/${slug}`
+        `https://testapi.kertaskerja.cc/api/v1/alur-kerja/datakinerjapemda/list/$slug`
       );
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
@@ -132,7 +132,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
             </Link>
             <span className="mx-2">/</span>
             <Link href="/pemda/jenis-data" className="hover:underline">
-              Jenis Data
+              Jenis Kelompok Data
             </Link>
             <span className="mx-2">/</span>
             <span className="font-semibold text-gray-800">{dataName}</span>
@@ -149,7 +149,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
 
         {/* Judul */}
         <h2 className="text-xl font-bold text-sidebar-bg mb-4">
-          JENIS DATA: {dataName}
+          JENIS KELOMPOK DATA: {dataName}
         </h2>
 
         {/* DataTable */}

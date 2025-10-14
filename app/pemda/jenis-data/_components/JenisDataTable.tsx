@@ -24,7 +24,7 @@ const JenisDataTable = ({ jenisDataList, onDelete }: JenisDataTableProps) => {
         <thead className="bg-blue-200 text-gray-800 uppercase">
           <tr>
             <th className="p-3 border border-gray-300 w-16 text-center">No</th>
-            <th className="p-3 border border-gray-300 text-center">Jenis Data</th>
+            <th className="p-3 border border-gray-300 text-center">Jenis Kelompok Data</th>
             <th className="p-3 border border-gray-300 w-48 text-center">Aksi</th>
           </tr>
         </thead>

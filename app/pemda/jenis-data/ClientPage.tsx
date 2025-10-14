@@ -131,17 +131,17 @@ export default function ClientPage() {
             Pemda
           </Link>
             <span className="mx-2">/</span>
-          <span className="font-semibold text-gray-800">Jenis Data</span>
+          <span className="font-semibold text-gray-800">Jenis Kelompok Data</span>
         </div>
 
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-sidebar-bg">JENIS DATA</h2>
+          <h2 className="text-xl font-bold text-sidebar-bg">JENIS KELOMPOK DATA</h2>
           <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-colors"
           >
             <Plus size={20} />
-            Tambah Jenis Data
+            Tambah Jenis Kelompok Data
           </button>
         </div>
 
