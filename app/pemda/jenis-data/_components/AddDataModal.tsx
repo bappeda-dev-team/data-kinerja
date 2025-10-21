@@ -12,15 +12,36 @@ type ModalProps = {
 };
 
 interface OptionType {
-  value: number;     // untuk periode: bebas, kita pakai Number(cookie.value) agar cocok tipe
-  label: string;     // "2020–2025" atau "2020-2025"
+  value: number; // untuk periode: pakai start year (mis. 2020); untuk tahun: pakai tahun (mis. 2022)
+  label: string; // "2020–2025" / "Tahun 2022"
 }
+
+type CategoryValue = "periode" | "tahun";
 
 interface FormValue {
   jenis_data: string;
-  periode: OptionType | null;
-  tahun: OptionType | null;
+  periode: OptionType | null; // dipakai saat mode 'periode'
+  tahun: OptionType | null;   // dipakai saat mode 'tahun'
 }
+
+// util: parse cookie Select(JSON)
+const safeParseOption = (v: string | null | undefined): { value?: string; label?: string } | null => {
+  if (!v) return null;
+  try {
+    const o = JSON.parse(v);
+    if (o && typeof o.value === "string" && typeof o.label === "string") return o;
+  } catch {}
+  return null;
+};
+
+// util: tarik YY-YY dari label (support - / –)
+const parseRange = (label: string) => {
+  const m = label.match(/(\d{4}).*?(\d{4})/);
+  return {
+    start: m ? parseInt(m[1], 10) : NaN,
+    end: m ? parseInt(m[2], 10) : NaN,
+  };
+};
 
 const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const {
@@ -30,101 +51,121 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
     setValue,
     formState: { errors },
   } = useForm<FormValue>({
-    defaultValues: {
-      jenis_data: "",
-      periode: null,
-      tahun: null,
-    },
+    defaultValues: { jenis_data: "", periode: null, tahun: null },
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Guard: cek cookie periode dari header
   const [checked, setChecked] = useState(false);
-  const [hasPeriode, setHasPeriode] = useState(false);
 
-  // Periode static (boleh tetap ada). Default nanti diambil dari cookie
+  // Mode dari COOKIE header:
+  // - selectedCategory (JSON {value:'periode'|'tahun', label:'...'})
+  // fallback: kalau ada selectedYear → 'tahun' else 'periode'
+  const [mode, setMode] = useState<CategoryValue>("periode");
+
+  // Opsi periode (bisa kamu ganti ke data API kalau perlu)
   const periodOptions: OptionType[] = [
-    { label: "2020–2025", value: 2020 },
-    { label: "2026–2030", value: 2026 },
     { label: "2031–2035", value: 2031 },
+    { label: "2026–2030", value: 2026 },
+    { label: "2020–2025", value: 2020 },
   ];
 
-  // Ambil periode & tahun dari cookie saat modal dibuka
+  // Build semua tahun dari range min–max periode yang ada (dipakai saat mode 'tahun')
+  const allYearOptions: OptionType[] = useMemo(() => {
+    if (!periodOptions.length) return [];
+    let minStart = Infinity;
+    let maxEnd = -Infinity;
+    for (const p of periodOptions) {
+      const { start, end } = parseRange(p.label);
+      if (!Number.isNaN(start) && start < minStart) minStart = start;
+      if (!Number.isNaN(end) && end > maxEnd) maxEnd = end;
+    }
+    const arr: OptionType[] = [];
+    for (let y = maxEnd; y >= minStart; y--) arr.push({ value: y, label: `Tahun ${y}` });
+    return arr;
+  }, [periodOptions]);
+
+  // Prefill berdasar cookie saat modal dibuka
   useEffect(() => {
     if (!isOpen) return;
 
-    // cookie "selectedPeriode" disimpan PageHeader sebagai JSON { value: string, label: "YYYY-YYYY" }
-    const pRaw = getCookie("selectedPeriode");
-    const yRaw = getCookie("selectedYear"); // string tahun, mis. "2032"
+    const catCookie = safeParseOption(getCookie("selectedCategory"));
+    const periodeCookie = safeParseOption(getCookie("selectedPeriode"));
+    const yearCookie = getCookie("selectedYear") || "";
 
-    let cookiePeriode: { value?: string | number; label?: string } | null = null;
-    try {
-      cookiePeriode = pRaw ? JSON.parse(pRaw) : null;
-    } catch {
-      cookiePeriode = null;
-    }
+    const catVal = (catCookie?.value === "tahun" || catCookie?.value === "periode")
+      ? (catCookie.value as CategoryValue)
+      : (yearCookie ? "tahun" : "periode");
 
-    const adaPeriode = Boolean(cookiePeriode?.label);
-    setHasPeriode(adaPeriode);
+    setMode(catVal);
 
-    if (adaPeriode) {
-      // set default periode dari cookie
+    // Set default dari cookie
+    if (periodeCookie?.label) {
       const opt: OptionType = {
-        value: Number(cookiePeriode!.value ?? 0),
-        label: cookiePeriode!.label!, // bisa "2020-2025" atau "2020–2025"
+        value: Number(periodeCookie.value ?? 0),
+        label: periodeCookie.label!,
       };
       setValue("periode", opt, { shouldDirty: false, shouldValidate: true });
 
-      // jika ada cookie tahun & masih dalam rentang periode → set juga
-      const m = opt.label.match(/(\d{4}).*?(\d{4})/);
-      const start = m ? parseInt(m[1], 10) : NaN;
-      const end = m ? parseInt(m[2], 10) : NaN;
-      const yNum = yRaw ? Number(yRaw) : NaN;
-
+      // kalau ada yearCookie & masih in-range, isi juga field tahun
+      const { start, end } = parseRange(opt.label);
+      const yNum = Number(yearCookie);
       if (!Number.isNaN(start) && !Number.isNaN(end) && yNum >= start && yNum <= end) {
         setValue("tahun", { value: yNum, label: `Tahun ${yNum}` }, { shouldDirty: false, shouldValidate: true });
       } else {
         setValue("tahun", null, { shouldDirty: false, shouldValidate: true });
       }
     } else {
-      // tidak ada cookie → kosongkan
-      setValue("periode", null);
-      setValue("tahun", null);
+      // tidak ada cookie periode
+      setValue("periode", null, { shouldDirty: false, shouldValidate: true });
+      // Tahun tetap bisa terisi kalau mode 'tahun' & ada cookie tahun
+      const yNum = Number(yearCookie);
+      setValue(
+        "tahun",
+        yearCookie && !Number.isNaN(yNum) ? { value: yNum, label: `Tahun ${yNum}` } : null,
+        { shouldDirty: false, shouldValidate: true }
+      );
     }
 
     setChecked(true);
   }, [isOpen, setValue]);
 
-  // Watch periode yang aktif
+  // Jika user mengganti periode, kosongkan tahun agar aman (walau di UI tahun tak ditampilkan saat mode 'periode')
   const selectedPeriode = useWatch({ control, name: "periode" });
+  useEffect(() => {
+    setValue("tahun", null, { shouldDirty: false, shouldValidate: true });
+  }, [selectedPeriode, setValue]);
 
-  // Opsi tahun hanya dari periode terpilih
-  const filteredYearOptions: OptionType[] = useMemo(() => {
+  // List tahun dari periode terpilih (kalau suatu saat kamu mau mengaktifkan "tahun tergantung periode")
+  const yearsFromSelectedPeriode: OptionType[] = useMemo(() => {
     if (!selectedPeriode) return [];
-    // dukung hyphen (-) & en-dash (–)
-    const m = selectedPeriode.label.match(/(\d{4}).*?(\d{4})/);
-    const start = m ? parseInt(m[1], 10) : selectedPeriode.value;
-    const end = m ? parseInt(m[2], 10) : selectedPeriode.value + 4;
-
+    const { start, end } = parseRange(selectedPeriode.label);
+    if (Number.isNaN(start) || Number.isNaN(end)) return [];
     const arr: OptionType[] = [];
-    for (let y = start; y <= end; y++) arr.push({ label: `Tahun ${y}`, value: y });
+    for (let y = end; y >= start; y--) arr.push({ value: y, label: `Tahun ${y}` });
     return arr;
   }, [selectedPeriode]);
 
-  // Periode berubah → kosongkan tahun agar tidak out-of-range
-  useEffect(() => {
-    setValue("tahun", null);
-  }, [selectedPeriode, setValue]);
-
+  // SUBMIT
   const onSubmit: SubmitHandler<FormValue> = async (data) => {
-    if (!data.jenis_data || !data.tahun) return;
+    // Validasi sesuai mode:
+    if (!data.jenis_data) return;
+
+    if (mode === "periode" && !data.periode) return;
+    if (mode === "tahun" && !data.tahun) return;
+
     setIsSubmitting(true);
 
-    const payload = {
-      jenis_data: data.jenis_data,
-      tahun: data.tahun.value,
-    };
+    // Payload contoh:
+    // - mode 'tahun' → kirim tahun
+    // - mode 'periode' → kirim periode_start + periode_label (ubah sesuai kebutuhan backend kamu)
+    const payload =
+      mode === "tahun"
+        ? { jenis_data: data.jenis_data, tahun: data.tahun!.value }
+        : {
+            jenis_data: data.jenis_data,
+            periode_start: data.periode!.value,
+            periode_label: data.periode!.label,
+          };
 
     try {
       const response = await fetch("https://alurkerja.zeabur.app/jenisdata", {
@@ -169,52 +210,50 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
           <h3 className="text-xl font-bold text-center text-gray-800">TAMBAH JENIS KELOMPOK DATA</h3>
         </div>
 
-        {/* Guard isi modal: kalau periode belum dipilih di header, tampilkan pesan saja */}
-        {checked && !hasPeriode ? (
-          <div className="p-8">
-            <div className="border rounded-lg p-6 text-center">
-              <p className="text-red-600 font-semibold">Pilih Periode Terlebih Dahulu!</p>
-              <p className="text-gray-500 mt-1">Set dari filter bar/header, lalu buka kembali modal ini.</p>
-              <button
-                onClick={handleClose}
-                className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-800"
-              >
-                Tutup
-              </button>
+        <div className="p-8">
+          {/* INFO MODE */}
+          {checked && (
+            <div className="mb-5 text-sm text-gray-600">
+              Mode input mengikuti header:{" "}
+              <span className="font-semibold uppercase">
+                {mode === "periode" ? "PERIODE" : "TAHUN"}
+              </span>
             </div>
-          </div>
-        ) : (
-          <div className="p-8">
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <div className="grid grid-cols-1 gap-6">
-                {/* Jenis Data */}
-                <div>
-                  <label htmlFor="jenis_data" className="block text-sm font-bold text-gray-700 mb-2">
-                    JENIS KELOMPOK DATA
-                  </label>
-                  <Controller
-                    name="jenis_data"
-                    control={control}
-                    rules={{ required: "Jenis data tidak boleh kosong" }}
-                    render={({ field }) => (
-                      <input
-                        {...field}
-                        id="jenis_data"
-                        type="text"
-                        placeholder="Masukkan Nama Data"
-                        className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${
-                          errors.jenis_data ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-                        }`}
-                      />
-                    )}
-                  />
-                  {errors.jenis_data && <p className="text-red-500 text-sm mt-1">{errors.jenis_data.message}</p>}
-                </div>
+          )}
 
-                {/* Periode (default dari cookie) */}
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Jenis Data */}
+              <div>
+                <label htmlFor="jenis_data" className="block text-sm font-bold text-gray-700 mb-2">
+                  JENIS KELOMPOK DATA
+                </label>
+                <Controller
+                  name="jenis_data"
+                  control={control}
+                  rules={{ required: "Jenis data tidak boleh kosong" }}
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      id="jenis_data"
+                      type="text"
+                      placeholder="Masukkan Nama Data"
+                      className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${
+                        errors.jenis_data
+                          ? "border-red-500 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
+                      }`}
+                    />
+                  )}
+                />
+                {errors.jenis_data && <p className="text-red-500 text-sm mt-1">{errors.jenis_data.message}</p>}
+              </div>
+
+              {/* === PERIODE/TAHUN (SATU FIELD SAJA SESUAI MODE) === */}
+              {mode === "periode" ? (
                 <div>
                   <label htmlFor="periode" className="block text-sm font-bold text-gray-700 mb-2">
-                    PERIODE
+                    PERIODE/TAHUN
                   </label>
                   <Controller
                     name="periode"
@@ -232,11 +271,10 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
                   />
                   {errors.periode && <p className="text-red-500 text-sm mt-1">{errors.periode.message}</p>}
                 </div>
-
-                {/* Tahun: hanya time-series dari periode yang aktif (default dari cookie jika valid) */}
+              ) : (
                 <div>
                   <label htmlFor="tahun" className="block text-sm font-bold text-gray-700 mb-2">
-                    TAHUN
+                    PERIODE/TAHUN
                   </label>
                   <Controller
                     name="tahun"
@@ -246,36 +284,36 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
                       <Select
                         {...field}
                         inputId="tahun"
-                        options={filteredYearOptions}
-                        placeholder={selectedPeriode ? "Pilih Tahun" : "Pilih Periode dulu"}
+                        // Jika ingin tahun mengikuti periode cookie, ganti options ke yearsFromSelectedPeriode
+                        options={allYearOptions}
+                        placeholder="Pilih Tahun"
                         isClearable
-                        isDisabled={!selectedPeriode}
                       />
                     )}
                   />
                   {errors.tahun && <p className="text-red-500 text-sm mt-1">{errors.tahun.message}</p>}
                 </div>
-              </div>
+              )}
+            </div>
 
-              <div className="flex flex-col gap-4 mt-8">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? "Menyimpan..." : "Simpan"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-red-500 to-pink-500 hover:opacity-90 transition-opacity"
-                >
-                  Batal
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+            <div className="flex flex-col gap-4 mt-8">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-red-500 to-pink-500 hover:opacity-90 transition-opacity"
+              >
+                Batal
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

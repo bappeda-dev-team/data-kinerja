@@ -1,13 +1,28 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { DataKinerja } from "../[slug]/DetailClientPage";
 import { getCookie } from "@/app/components/lib/Cookie";
 
-const years = [
-  "2036","2035","2034","2033","2032","2031","2030",
-  "2029","2028","2027","2026","2025","2024","2023",
-  "2022","2021","2020"
-];
+// ===== Helpers =====
+type RSOption = { value: string; label: string };
+
+const safeParseOption = (v: string | null | undefined): RSOption | null => {
+  if (!v) return null;
+  try {
+    const o = JSON.parse(v);
+    if (o && typeof o.value === "string" && typeof o.label === "string") return o;
+  } catch {}
+  return null;
+};
+
+const parseRange = (label: string) => {
+  // dukung "2020-2024" atau "2020–2024"
+  const m = label.match(/(\d{4}).*?(\d{4})/);
+  return {
+    start: m ? parseInt(m[1], 10) : NaN,
+    end: m ? parseInt(m[2], 10) : NaN,
+  };
+};
 
 type DataTableProps = {
   dataList?: DataKinerja[];
@@ -18,40 +33,73 @@ type DataTableProps = {
 const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
   const [openModal, setOpenModal] = useState(false);
   const [keterangan, setKeterangan] = useState("");
-  const [hasPeriode, setHasPeriode] = useState(false);
-  const [checked, setChecked] = useState(false); // anti flicker (cek cookie dulu)
 
-  // Cek apakah periode sudah dipilih (cookie diset oleh header)
+  // header cookies
+  const [checked, setChecked] = useState(false);
+  const [mode, setMode] = useState<"periode" | "tahun" | null>(null);
+  const [periodeLabel, setPeriodeLabel] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+
+  // Baca cookies dari header dan tentukan mode + tahun yang ditampilkan
   useEffect(() => {
-    const raw = getCookie("selectedPeriode");
-    try {
-      const obj = raw ? JSON.parse(raw) : null;
-      setHasPeriode(Boolean(obj?.value && obj?.label));
-    } catch {
-      setHasPeriode(false);
-    } finally {
-      setChecked(true);
-    }
+    const cat = safeParseOption(getCookie("selectedCategory"));   // {value:'periode'|'tahun',label:'...'}
+    const periode = safeParseOption(getCookie("selectedPeriode")); // {value:'..', label:'YYYY-YYYY'}
+    const year = getCookie("selectedYear") || "";
+
+    // tentukan mode: utamakan cookie kategori; fallback: ada selectedYear → 'tahun' else 'periode'
+    const m =
+      cat && (cat.value === "periode" || cat.value === "tahun")
+        ? (cat.value as "periode" | "tahun")
+        : (year ? "tahun" : "periode");
+
+    setMode(m);
+    setPeriodeLabel(periode?.label ?? null);
+    setSelectedYear(year || null);
+    setChecked(true);
   }, []);
+
+  // Buat daftar tahun yang akan ditampilkan sebagai kolom
+  const years: string[] = useMemo(() => {
+    if (mode === "tahun") {
+      return selectedYear ? [selectedYear] : [];
+    }
+    if (mode === "periode") {
+      if (!periodeLabel) return [];
+      const { start, end } = parseRange(periodeLabel);
+      if (Number.isNaN(start) || Number.isNaN(end) || start > end) return [];
+      const arr: string[] = [];
+      for (let y = start; y <= end; y++) arr.push(String(y));
+      return arr;
+    }
+    return [];
+  }, [mode, periodeLabel, selectedYear]);
 
   const handleOpenModal = (ket: string) => {
     setKeterangan(ket || "");
     setOpenModal(true);
   };
 
-  // Saat pertama render, tunggu hasil cek cookie supaya tidak kedap-kedip
+  // anti-flicker: tunggu cek cookie dulu
   if (!checked) return null;
 
-  // Jika periode belum dipilih → sembunyikan tabel & tampilkan peringatan
-  if (!hasPeriode) {
+  // guard: kalau filter header belum lengkap → sembunyikan tabel
+  const filterActive =
+    (mode === "periode" && !!periodeLabel) ||
+    (mode === "tahun" && !!selectedYear);
+
+  if (!filterActive || years.length === 0) {
     return (
       <div className="border p-5 rounded-xl shadow-lg">
         <p className="text-center text-red-600 font-semibold">
-          Pilih Periode Terlebih Dahulu!
+          Pilih <span className="underline">Periode/Tahun</span> di header terlebih dahulu!
         </p>
       </div>
     );
   }
+
+  // hitung kolspan baris "Tidak ada data"
+  const FIXED_COLS = 8; // No, Nama, Rumus, Sumber, Instansi + Satuan, Keterangan, Aksi = 5 + 3
+  const emptyRowColSpan = FIXED_COLS + years.length;
 
   return (
     <div className="overflow-x-auto">
@@ -63,14 +111,17 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
             <th rowSpan={2} className="p-2 border border-gray-300 text-center">Rumus Perhitungan</th>
             <th rowSpan={2} className="p-2 border border-gray-300 text-center">Sumber Data</th>
             <th rowSpan={2} className="p-2 border border-gray-300 text-center">Instansi Produsen Data</th>
-            <th colSpan={years.length} className="p-2 border border-gray-300 text-center">Tahun</th>
+            <th colSpan={years.length} className="p-2 border border-gray-300 text-center">
+              Tahun {mode === "periode" && periodeLabel ? `(${periodeLabel.replace("–","-")})` : ""}
+              {mode === "tahun" && selectedYear ? `(${selectedYear})` : ""}
+            </th>
             <th rowSpan={2} className="p-2 border border-gray-300 text-center">Satuan</th>
             <th rowSpan={2} className="p-2 border border-gray-300 text-center">Keterangan</th>
             <th rowSpan={2} className="p-2 border border-gray-300 text-center">Aksi</th>
           </tr>
           <tr>
-            {years.map((year) => (
-              <th key={year} className="p-2 border border-gray-300 text-center">{year}</th>
+            {years.map((y) => (
+              <th key={y} className="p-2 border border-gray-300 text-center">{y}</th>
             ))}
           </tr>
         </thead>
@@ -78,8 +129,17 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
         <tbody>
           {dataList.length > 0 ? (
             dataList.map((row, index) => {
+              // mapping tahun → nilai target
               const tahunMap: Record<string, string> = {};
-              row.target?.forEach((t) => (tahunMap[t.tahun] = t.target));
+              row.target?.forEach((t) => {
+                if (t?.tahun) tahunMap[t.tahun] = t.target;
+              });
+
+              // ambil satuan: prioritaskan satuan yang match tahun yang tampil; fallback ke target[0]
+              const firstDisplayedYear = years[0];
+              const satuanByYear = row.target?.find((t) => t.tahun === firstDisplayedYear)?.satuan
+                ?? row.target?.[0]?.satuan
+                ?? "-";
 
               return (
                 <tr key={row.id} className="bg-white hover:bg-gray-50">
@@ -88,12 +148,14 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
                   <td className="p-2 border border-gray-300">{row.rumus_perhitungan}</td>
                   <td className="p-2 border border-gray-300">{row.sumber_data}</td>
                   <td className="p-2 border border-gray-300">{row.instansi_produsen_data}</td>
-                  {years.map((year) => (
-                    <td key={year} className="p-2 border border-gray-300 text-center">
-                      {tahunMap[year] || "-"}
+
+                  {years.map((y) => (
+                    <td key={y} className="p-2 border border-gray-300 text-center">
+                      {tahunMap[y] ?? "-"}
                     </td>
                   ))}
-                  <td className="p-2 border border-gray-300">{row.target?.[0]?.satuan || "-"}</td>
+
+                  <td className="p-2 border border-gray-300 text-center">{satuanByYear}</td>
                   <td className="p-2 border border-gray-300 text-center">
                     <button
                       onClick={() => handleOpenModal(row.keterangan)}
@@ -123,7 +185,7 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
             })
           ) : (
             <tr className="bg-white">
-              <td colSpan={years.length + 9} className="p-3 text-center text-gray-500 border border-gray-300">
+              <td colSpan={emptyRowColSpan} className="p-3 text-center text-gray-500 border border-gray-300">
                 Tidak ada data.
               </td>
             </tr>
