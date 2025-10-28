@@ -5,14 +5,11 @@ import Cookies from "js-cookie";
 import { setCookie, getCookie } from "@/app/components/lib/Cookie";
 import { AlertNotification } from "../global/Alert";
 import { usePathname } from "next/navigation";
-// ==================
-// TYPES
-// ==================
+
 interface OptionTypeString {
   value: string;
   label: string;
 }
-
 type CategoryValue = "periode" | "tahun";
 
 const CATEGORY_OPTIONS: OptionTypeString[] = [
@@ -20,9 +17,6 @@ const CATEGORY_OPTIONS: OptionTypeString[] = [
   { value: "tahun", label: "Tahunan" },
 ];
 
-// ==================
-// API ENDPOINTS
-// ==================
 const API_PERIODE =
   process.env.NEXT_PUBLIC_PERIODE_API ??
   "https://periode-service-test.zeabur.app/periode";
@@ -30,24 +24,22 @@ const API_OPD =
   process.env.NEXT_PUBLIC_OPD_API ??
   "https://periode-service-test.zeabur.app/list_opd";
 
-// ==================
-// HELPERS
-// ==================
 const safeParseOption = (v: string | null | undefined): OptionTypeString | null => {
   if (!v) return null;
   try {
     const o = JSON.parse(v);
-    if (o && typeof o.value === "string" && typeof o.label === "string") {
-      return o;
-    }
+    if (o && typeof o.value === "string" && typeof o.label === "string") return o;
   } catch {}
   return null;
 };
 
 const PageHeader = () => {
-  const pathname = usePathname(); 
-  const HIDE_ON = ["/", "/login", "/register"]; 
-  if (HIDE_ON.includes(pathname)) return null; 
+  // 1) Panggil hook ini SELALU
+  const pathname = usePathname();
+  const HIDE_ON = ["/", "/login", "/register"];
+  const hideHeader = HIDE_ON.includes(pathname);
+
+  // 2) Panggil SEMUA hooks lain TANPA kondisi
   const [isClient, setIsClient] = useState(false);
 
   const [dinasOptions, setDinasOptions] = useState<OptionTypeString[]>([]);
@@ -63,22 +55,18 @@ const PageHeader = () => {
   const [selectedPeriode, setSelectedPeriode] = useState<OptionTypeString | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>("");
 
-  // ==== INIT COOKIES ====
   useEffect(() => {
     setIsClient(true);
-
     const dCookie = safeParseOption(getCookie("selectedDinas"));
-    const cCookie = safeParseOption(getCookie("selectedCategory")); // {value:'periode'|'tahun', label:'...'}
+    const cCookie = safeParseOption(getCookie("selectedCategory"));
     const pCookie = safeParseOption(getCookie("selectedPeriode"));
     const yCookie = getCookie("selectedYear") || "";
-
     if (dCookie) setSelectedDinas(dCookie);
     if (cCookie) setSelectedCategory(cCookie);
     if (pCookie) setSelectedPeriode(pCookie);
     if (yCookie) setSelectedYear(yCookie);
   }, []);
 
-  // ==== FETCH OPTIONS ====
   useEffect(() => {
     if (!isClient) return;
 
@@ -109,19 +97,15 @@ const PageHeader = () => {
         const res = await fetch(API_PERIODE, { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-
         const options: OptionTypeString[] = (json?.data ?? []).map((it: any) => ({
           value: String(it.id),
           label: `${it.tahun_awal}-${it.tahun_akhir}`,
         }));
-
-        // Sort by start year desc
         options.sort((a, b) => {
           const sa = Number(a.label.split("-")[0]);
           const sb = Number(b.label.split("-")[0]);
           return sb - sa;
         });
-
         setPeriodeOptions(options);
       } catch (e: any) {
         setPeriodeError(e?.message || "Gagal memuat periode");
@@ -135,7 +119,6 @@ const PageHeader = () => {
     fetchPeriodeOptions();
   }, [isClient]);
 
-  // ==== COOKIES PERSISTENCE ====
   useEffect(() => {
     if (!isClient) return;
     if (selectedDinas) setCookie("selectedDinas", JSON.stringify(selectedDinas));
@@ -160,7 +143,6 @@ const PageHeader = () => {
     else Cookies.remove("selectedYear");
   }, [isClient, selectedYear]);
 
-  // ==== YEARS (untuk mode "Tahunan"): diambil dari rentang min–max seluruh periode ====
   const allYearOptions: OptionTypeString[] = useMemo(() => {
     if (!periodeOptions.length) return [];
     let minStart = Infinity;
@@ -173,7 +155,6 @@ const PageHeader = () => {
       if (!Number.isNaN(e) && e > maxEnd) maxEnd = e;
     }
     if (!Number.isFinite(minStart) || !Number.isFinite(maxEnd)) return [];
-
     const arr: OptionTypeString[] = [];
     for (let y = maxEnd; y >= minStart; y--) {
       arr.push({ value: String(y), label: `Tahun ${y}` });
@@ -181,23 +162,17 @@ const PageHeader = () => {
     return arr;
   }, [periodeOptions]);
 
-  // ==== Ganti kategori: bersihkan pilihan lawan ====
   const onCategoryChange = (opt: OptionTypeString | null) => {
     setSelectedCategory(opt);
-    // saat pindah mode, clear pilihan lain biar gak “nyangkut”
     if (!opt) {
       setSelectedPeriode(null);
       setSelectedYear("");
       return;
     }
-    if (opt.value === "periode") {
-      setSelectedYear("");
-    } else if (opt.value === "tahun") {
-      setSelectedPeriode(null);
-    }
+    if (opt.value === "periode") setSelectedYear("");
+    else if (opt.value === "tahun") setSelectedPeriode(null);
   };
 
-  // ==== AKTIFKAN FILTER ====
   const handleActivate = () => {
     if (!selectedDinas) {
       AlertNotification("Gagal", "Harap pilih Dinas/OPD terlebih dahulu", "error");
@@ -207,29 +182,26 @@ const PageHeader = () => {
       AlertNotification("Gagal", "Harap pilih Kategori (Periode/Tahunan)", "error");
       return;
     }
-
     const cat = selectedCategory.value as CategoryValue;
-
     if (cat === "periode" && !selectedPeriode) {
       AlertNotification("Gagal", "Harap pilih Periode 5 tahunan", "error");
       return;
     }
-
     if (cat === "tahun" && !selectedYear) {
       AlertNotification("Gagal", "Harap pilih Tahun", "error");
       return;
     }
-
     AlertNotification(
       "Berhasil",
       cat === "periode" ? "Filter Periode diaktifkan" : "Filter Tahun diaktifkan",
       "success",
       1200
     );
-    setTimeout(() => {
-      window.location.reload();
-    }, 1200);
+    setTimeout(() => window.location.reload(), 1200);
   };
+
+  // 3) Barulah return null SETELAH semua hooks dipanggil
+  if (hideHeader) return null;
 
   return (
     <div className="bg-filter-bar-bg p-3 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4">
@@ -243,7 +215,7 @@ const PageHeader = () => {
         {isClient && (
           <>
             {/* DINAS */}
-            <Select<OptionTypeString, false>
+            <Select
               instanceId="select-dinas"
               name="dinas"
               className="text-sm w-full sm:w-64"
@@ -257,8 +229,8 @@ const PageHeader = () => {
               isClearable
             />
 
-            {/* KATEGORI: Periode / Tahun */}
-            <Select<OptionTypeString, false>
+            {/* KATEGORI */}
+            <Select
               instanceId="select-category"
               name="category"
               className="text-sm w-full sm:w-56"
@@ -271,9 +243,9 @@ const PageHeader = () => {
               isClearable
             />
 
-            {/* CONDITIONAL: jika Periode → tampil Periode; jika Tahun → tampil Tahun */}
+            {/* PERIODE / TAHUN */}
             {selectedCategory?.value === "periode" && (
-              <Select<OptionTypeString, false>
+              <Select
                 instanceId="select-periode"
                 name="periode"
                 className="text-sm w-full sm:w-56"
@@ -289,7 +261,7 @@ const PageHeader = () => {
             )}
 
             {selectedCategory?.value === "tahun" && (
-              <Select<OptionTypeString, false>
+              <Select
                 instanceId="select-tahun"
                 name="tahun"
                 className="text-sm w-full sm:w-44"
