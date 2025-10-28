@@ -4,7 +4,7 @@ import Select from "react-select";
 import Cookies from "js-cookie";
 import { setCookie, getCookie } from "@/app/components/lib/Cookie";
 import { AlertNotification } from "../global/Alert";
-
+import { usePathname } from "next/navigation";
 // ==================
 // TYPES
 // ==================
@@ -45,6 +45,9 @@ const safeParseOption = (v: string | null | undefined): OptionTypeString | null 
 };
 
 const PageHeader = () => {
+  const pathname = usePathname(); 
+  const HIDE_ON = ["/", "/login", "/register"]; 
+  if (HIDE_ON.includes(pathname)) return null; 
   const [isClient, setIsClient] = useState(false);
 
   const [dinasOptions, setDinasOptions] = useState<OptionTypeString[]>([]);
