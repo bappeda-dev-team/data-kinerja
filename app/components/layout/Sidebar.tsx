@@ -54,6 +54,11 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (isOpen: b
         setOpenMenus(prevState => ({ ...prevState, [href]: !prevState[href] }));
     };
 
+const HIDE_ON = ['/', '/login', '/register'];
+  if (HIDE_ON.includes(pathname)) {
+    return null;
+  }
+
     const renderNavItems = () => {
         return navItems.map((item) => {
             const isParentActive = item.subItems 
