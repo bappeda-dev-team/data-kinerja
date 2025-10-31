@@ -99,7 +99,7 @@ const EditDataTableModal: React.FC<ModalProps> = ({
 
     try {
       const res = await fetch(
-        `https://alurkerja.zeabur.app/datakinerjapemda/${dataItem.id}`,
+        `https://alurkerja.zeabur.app/datakinerjaopd/${dataItem.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

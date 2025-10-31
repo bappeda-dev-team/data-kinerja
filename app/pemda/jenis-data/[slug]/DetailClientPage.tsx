@@ -7,6 +7,7 @@ import PageHeader from "@/app/components/layout/PageHeader";
 import DataTable from "../_components/DataTable";
 import AddDataTableModal from "../_components/AddDataTableModal";
 import EditDataTableModal from "../_components/EditDataTableModal";
+import { getSessionId } from "@/app/components/lib/Cookie";
 
 // ✅ Definisikan tipe data sesuai struktur API
 type Target = {
@@ -38,13 +39,29 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const [dataItemToEdit, setDataItemToEdit] = useState<DataKinerja | null>(
     null
   );
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+    useEffect(() => {
+    try {
+      setAuthToken(getSessionId());
+    } catch {
+      setAuthToken(null);
+    }
+  }, []);
 
   // ✅ Fungsi fetch data
   const fetchData = async () => {
     try {
-      const res = await fetch(
-        `https://testapi.kertaskerja.cc/api/v1/alur-kerja/datakinerjapemda/list/$slug`
-      );
+      // NOTE: semua fetch request polanya sama, harus ada X-Session-Id di headersnya
+      // TODO: ubah hardcoded url, ambil dari env
+      const res = await fetch(`https://testapi.kertaskerja.cc/api/v1/alur-kerja/datakinerjapemda/list/${slug}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-Id": authToken ?? "",
+        },
+        cache: "no-store", // opsional: biar tidak cache di Next.js
+      });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
       const json = await res.json();
@@ -97,6 +114,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const handleDelete = async (id: number) => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus data ini?")) return;
 
+    // TODO: ganti fetch url nya
     try {
       const response = await fetch(
         `https://alurkerja.zeabur.app/datakinerjapemda/${id}`,

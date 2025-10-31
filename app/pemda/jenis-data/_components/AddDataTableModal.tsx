@@ -7,6 +7,7 @@ import {
   Controller,
   SubmitHandler,
   FieldValues,
+  useFieldArray,
 } from "react-hook-form";
 import Select from "react-select";
 import { getCookie } from "@/app/components/lib/Cookie";
@@ -30,17 +31,26 @@ interface OptionType {
 
 type CategoryValue = "periode" | "tahun";
 
+type TargetRow = {
+  tahun: string;
+  target: string;
+  satuan: string;
+};
+
 interface FormValue {
   jenis_data_id: OptionType | null;
   nama_data: string;
   rumus_perhitungan: string;
   sumber_data: string;
   instansi_produsen_data: string;
-  // sekarang kita punya dua kemungkinan field, cuma satu yang ditampilkan/diisi
+
+  // hanya satu yang aktif sesuai mode
   periode: OptionType | null;
   tahun: OptionType | null;
-  satuan: string;
-  target: string;
+
+  // tabel dinamis
+  targets: TargetRow[];
+
   keterangan: string;
 }
 
@@ -54,7 +64,7 @@ const safeParseOption = (v: string | null | undefined): OptionType | null => {
   return null;
 };
 
-/** Helper: ambil {start,end} dari label "2031-2036" atau "2031–2036" */
+/** Helper: parse "2031-2036" / "2031–2036" */
 const parseRange = (label: string) => {
   const m = label.match(/(\d{4}).*?(\d{4})/);
   return {
@@ -63,12 +73,12 @@ const parseRange = (label: string) => {
   };
 };
 
-/** Helper: buat opsi tahun dari label periode */
-const yearsFromPeriodeLabel = (label: string): OptionType[] => {
+/** Helper: list tahun dari label periode */
+const yearsFromPeriodeLabel = (label: string): string[] => {
   const { start, end } = parseRange(label);
   if (Number.isNaN(start) || Number.isNaN(end) || start > end) return [];
-  const arr: OptionType[] = [];
-  for (let y = start; y <= end; y++) arr.push({ value: String(y), label: String(y) });
+  const arr: string[] = [];
+  for (let y = start; y <= end; y++) arr.push(String(y));
   return arr;
 };
 
@@ -79,6 +89,7 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
     reset,
     setValue,
     getValues,
+    watch,
     formState: { errors },
   } = useForm<FormValue>({
     defaultValues: {
@@ -89,10 +100,15 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
       instansi_produsen_data: "",
       periode: null,
       tahun: null,
-      satuan: "",
-      target: "",
+      targets: [], // tabel dinamis
       keterangan: "",
     },
+  });
+
+  // FieldArray untuk tabel
+  const { fields, replace } = useFieldArray({
+    control,
+    name: "targets",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,19 +118,12 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
   // Mode form (ikut header cookie): "periode" | "tahun"
   const [mode, setMode] = useState<CategoryValue>("periode");
 
-  // Opsi periode (dari cookie header saja—biar konsisten dengan filter)
-  const [periodeOptionFromCookie, setPeriodeOptionFromCookie] = useState<OptionType | null>(null);
-
-  // Opsi tahun dinamis dari periode cookie
-  const [yearOptions, setYearOptions] = useState<OptionType[]>([]);
-
-  /** Saat modal dibuka: baca cookie header dan set mode + prefill */
+  // ============== INIT DARI COOKIE HEADER ==============
   useEffect(() => {
     if (!isOpen) return;
 
-    // Cookie-cookies dari header PageHeader
-    const selectedCategory = safeParseOption(getCookie("selectedCategory")); // {value:'periode'|'tahun', label:'...'}
-    const periodeCookie = safeParseOption(getCookie("selectedPeriode"));     // {value:'<id|start>', label:'YYYY-YYYY'}
+    const selectedCategory = safeParseOption(getCookie("selectedCategory")); // {value:'periode'|'tahun'}
+    const periodeCookie = safeParseOption(getCookie("selectedPeriode"));     // {value:'...', label:'YYYY-YYYY'}
     const yearCookie = getCookie("selectedYear") || "";
 
     // Tentukan mode
@@ -124,30 +133,23 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
         : (yearCookie ? "tahun" : "periode");
     setMode(inferredMode);
 
-    // Prefill PERIODE (kalau ada)
-    if (periodeCookie) {
-      setPeriodeOptionFromCookie(periodeCookie);
-      setValue("periode", periodeCookie, { shouldValidate: true });
-      // Build opsi tahun dari periode cookie
-      const dynYears = yearsFromPeriodeLabel(periodeCookie.label);
-      // jika ada yearCookie tapi tidak ada di opsi, tambahkan
-      if (yearCookie && !dynYears.find((o) => o.value === yearCookie)) {
-        dynYears.push({ value: yearCookie, label: yearCookie });
-      }
-      setYearOptions(dynYears);
-    } else {
-      setPeriodeOptionFromCookie(null);
-      setValue("periode", null);
-      setYearOptions([]);
-    }
+    // Prefill selector Periode/Tahun (hanya untuk dipamerkan di form; sumber utama tetap dari header)
+    if (periodeCookie) setValue("periode", periodeCookie);
+    else setValue("periode", null);
 
-    // Prefill TAHUN (kalau ada)
-    if (yearCookie) {
-      setValue("tahun", { value: yearCookie, label: yearCookie }, { shouldValidate: true });
+    if (yearCookie) setValue("tahun", { value: yearCookie, label: yearCookie });
+    else setValue("tahun", null);
+
+    // Bangun baris tabel sesuai mode
+    if (inferredMode === "periode" && periodeCookie) {
+      const years = yearsFromPeriodeLabel(periodeCookie.label);
+      replace(years.map((y) => ({ tahun: y, target: "", satuan: "" })));
+    } else if (inferredMode === "tahun" && yearCookie) {
+      replace([{ tahun: yearCookie, target: "", satuan: "" }]);
     } else {
-      setValue("tahun", null);
+      replace([]); // fallback aman
     }
-  }, [isOpen, setValue]);
+  }, [isOpen, replace, setValue]);
 
   // Ambil jenis data untuk select
   const fetchJenisData = async () => {
@@ -162,6 +164,7 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
       }));
       setJenisDataOptions(options);
 
+      // preselect dari prop
       const selectedOption = options.find((opt) => opt.value === jenisDataId);
       if (selectedOption) setValue("jenis_data_id", selectedOption);
     } catch (error) {
@@ -175,55 +178,23 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
     if (isOpen) fetchJenisData();
   }, [isOpen]);
 
-  // SUBMIT: branch sesuai mode
+  // ============== SUBMIT ==============
   const onSubmit: SubmitHandler<FormValue> = async (data) => {
     setIsSubmitting(true);
 
-    // Common fields
-    const base = {
+    const payload = {
       nama_data: data.nama_data,
       rumus_perhitungan: data.rumus_perhitungan,
       sumber_data: data.sumber_data,
       instansi_produsen_data: data.instansi_produsen_data,
       keterangan: data.keterangan,
       jenis_data_id: parseInt(data.jenis_data_id!.value, 10),
+      target: data.targets.map((t) => ({
+        tahun: t.tahun,
+        satuan: t.satuan,
+        target: t.target,
+      })),
     };
-
-    let payload: any;
-
-    if (mode === "tahun") {
-      // === MODE TAHUN: sama persis dengan punyamu
-      payload = {
-        ...base,
-        target: [
-          {
-            tahun: data.tahun!.value,
-            satuan: data.satuan,
-            target: data.target,
-          },
-        ],
-      };
-    } else {
-      // === MODE PERIODE: backend kamu minta 'tahun' di target.
-      // Agar tetap valid, kita default-kan ke start-year dari periode cookie.
-      const p = getValues("periode");
-      const start = p ? parseRange(p.label).start : NaN;
-      const tahunDefault = !Number.isNaN(start) ? String(start) : "";
-
-      payload = {
-        ...base,
-        // Kalau kamu ingin mengirim info periode ke backend, bisa tambahkan field berikut:
-        // periode_label: p?.label,
-        // periode_start: p?.value,
-        target: [
-          {
-            tahun: tahunDefault, // <<-- default tahun = start period (bisa kamu ubah sesuai kontrak API)
-            satuan: data.satuan,
-            target: data.target,
-          },
-        ],
-      };
-    }
 
     try {
       const response = await fetch("https://alurkerja.zeabur.app/datakinerjapemda", {
@@ -266,7 +237,7 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
       style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
     >
       <div
-        className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-5 border-b">
@@ -274,10 +245,8 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
         </div>
 
         <div className="p-8">
-          {/* Info kecil biar jelas mode-nya apa */}
           <div className="mb-4 text-sm text-gray-600">
-            Mode input mengikuti header:{" "}
-            <span className="font-semibold uppercase">{mode === "periode" ? "PERIODE" : "TAHUN"}</span>
+            Mode input mengikuti header: <span className="font-semibold uppercase">{mode}</span>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -296,29 +265,91 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
               <InputField control={control} name="sumber_data" label="Sumber Data" error={errors.sumber_data?.message as any} />
               <InputField control={control} name="instansi_produsen_data" label="Instansi Produsen Data" error={errors.instansi_produsen_data?.message as any} />
 
-              {/* === SATU FIELD SAJA SESUAI MODE === */}
+              {/* Penunjuk Periode/Tahun (read-only mengikuti header) */}
               {mode === "periode" ? (
                 <SelectField
                   control={control}
                   name="periode"
                   label="Periode/Tahun"
-                  options={periodeOptionFromCookie ? [periodeOptionFromCookie] : []}
+                  options={getValues("periode") ? [getValues("periode") as OptionType] : []}
                   error={errors.periode?.message as any}
-                  // Biar konsisten dengan header → non-editable kalau mau, tinggal aktifkan isDisabled
-                  // isDisabled
+                  isDisabled
                 />
               ) : (
                 <SelectField
                   control={control}
                   name="tahun"
                   label="Periode/Tahun"
-                  options={yearOptions}
+                  options={getValues("tahun") ? [getValues("tahun") as OptionType] : []}
                   error={errors.tahun?.message as any}
+                  isDisabled
                 />
               )}
 
-              <InputField control={control} name="target" label="Nilai Target" error={errors.target?.message as any} type="text" />
-              <InputField control={control} name="satuan" label="Satuan" error={errors.satuan?.message as any} />
+              {/* =================== TABEL DINAMIS =================== */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Target per Tahun:</label>
+
+                {fields.length === 0 ? (
+                  <p className="text-gray-500 text-sm">Tidak ada tahun untuk diinput.</p>
+                ) : (
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="p-2 border text-left w-28">Tahun</th>
+                          <th className="p-2 border text-left">Target</th>
+                          <th className="p-2 border text-left w-40">Satuan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fields.map((row, idx) => (
+                          <tr key={row.id} className="odd:bg-white even:bg-gray-50">
+                            <td className="p-2 border">
+                              {/* Tahun dikunci dari header (read-only) */}
+                              <input
+                                className="w-full p-2 border rounded bg-gray-100"
+                                value={row.tahun}
+                                readOnly
+                              />
+                            </td>
+                            <td className="p-2 border">
+                              <Controller
+                                control={control}
+                                name={`targets.${idx}.target`}
+                                rules={{ required: "Target tidak boleh kosong" }}
+                                render={({ field }) => (
+                                  <input
+                                    {...field}
+                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    placeholder="Masukkan Nilai Target"
+                                  />
+                                )}
+                              />
+                            </td>
+                            <td className="p-2 border">
+                              <Controller
+                                control={control}
+                                name={`targets.${idx}.satuan`}
+                                rules={{ required: "Satuan tidak boleh kosong" }}
+                                render={({ field }) => (
+                                  <input
+                                    {...field}
+                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    placeholder="Misal: persen"
+                                  />
+                                )}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              {/* ====================================================== */}
+
               <InputField control={control} name="keterangan" label="Keterangan" error={errors.keterangan?.message as any} isTextarea />
             </div>
 
@@ -407,7 +438,6 @@ interface SelectFieldProps<TFormValues extends FieldValues> {
   error?: string;
   onMenuOpen?: () => void;
   isLoading?: boolean;
-  // isDisabled? (optional)
   isDisabled?: boolean;
 }
 const SelectField = ({
