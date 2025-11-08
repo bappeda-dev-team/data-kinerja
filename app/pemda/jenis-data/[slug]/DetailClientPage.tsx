@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus } from "lucide-react";
 import Link from "next/link";
-import PageHeader from "@/app/components/layout/PageHeader";
+// import PageHeader from "@/app/components/layout/PageHeader";
 import DataTable from "../_components/DataTable";
 import AddDataTableModal from "../_components/AddDataTableModal";
 import EditDataTableModal from "../_components/EditDataTableModal";
 import { getSessionId } from "@/app/components/lib/Cookie";
 
-// ✅ Definisikan tipe data sesuai struktur API
+// ================= Types =================
 type Target = {
   tahun: string;
   satuan: string;
@@ -24,24 +24,26 @@ export interface DataKinerja {
   sumber_data: string;
   instansi_produsen_data: string;
   keterangan: string;
-  target: {
-    tahun: string;
-    satuan: string;
-    target: string;
-  }[];
+  target: Target[];
 }
+
+// ================= Consts =================
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ?? "https://testapi.kertaskerja.cc/api/v1";
 
 export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const dataName = slug.toUpperCase();
+
   const [openModalAdd, setOpenModalAdd] = useState(false);
   const [openModalEdit, setOpenModalEdit] = useState(false);
   const [dataList, setDataList] = useState<DataKinerja[]>([]);
-  const [dataItemToEdit, setDataItemToEdit] = useState<DataKinerja | null>(
-    null
-  );
+  const [dataItemToEdit, setDataItemToEdit] = useState<DataKinerja | null>(null);
+
+  // === Token sesi ===
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-    useEffect(() => {
+  // Ambil session id sekali saat mount
+  useEffect(() => {
     try {
       setAuthToken(getSessionId());
     } catch {
@@ -49,19 +51,23 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
     }
   }, []);
 
-  // ✅ Fungsi fetch data
-  const fetchData = async () => {
+  // === Fetch list (menunggu token siap) ===
+  const fetchData = useCallback(async () => {
+    if (!authToken) return; // skip jika token belum siap
     try {
-      // NOTE: semua fetch request polanya sama, harus ada X-Session-Id di headersnya
-      // TODO: ubah hardcoded url, ambil dari env
-      const res = await fetch(`https://testapi.kertaskerja.cc/api/v1/alur-kerja/datakinerjapemda/list/${slug}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Session-Id": authToken ?? "",
-        },
-        cache: "no-store", // opsional: biar tidak cache di Next.js
-      });
+      const res = await fetch(
+        `${API_BASE}/alur-kerja/datakinerjapemda/list/${slug}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Session-Id": authToken,
+          },
+          cache: "no-store",
+        }
+      );
+
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
       const json = await res.json();
@@ -70,13 +76,14 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
       console.error("Gagal fetch data kinerja:", err);
       setDataList([]);
     }
-  };
+  }, [authToken, slug]);
 
+  // Panggil fetchData setelah slug *dan* token siap
   useEffect(() => {
-    fetchData();
-  }, [slug]);
+    if (authToken) fetchData();
+  }, [slug, authToken, fetchData]);
 
-  // ✅ Success handler
+  // === Success handlers ===
   const handleAddSuccess = () => {
     setOpenModalAdd(false);
     fetchData();
@@ -87,43 +94,53 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
     fetchData();
   };
 
-  // ✅ Edit handler
+  // === Edit handler ===
   const handleEdit = (item: DataKinerja) => {
     setDataItemToEdit({
-      id: item.id, // pastikan item: DataKinerja
-      jenis_data_id: item.jenis_data_id || 0,
-      nama_data: item.nama_data || "",
-      rumus_perhitungan: item.rumus_perhitungan || "",
-      sumber_data: item.sumber_data || "",
-      instansi_produsen_data: item.instansi_produsen_data || "",
-      keterangan: item.keterangan || "",
-      target: item.target?.length
-        ? item.target
-        : [
-            {
-              tahun: new Date().getFullYear().toString(),
-              satuan: "",
-              target: "",
-            },
-          ],
+      id: item.id,
+      jenis_data_id: item.jenis_data_id ?? 0,
+      nama_data: item.nama_data ?? "",
+      rumus_perhitungan: item.rumus_perhitungan ?? "",
+      sumber_data: item.sumber_data ?? "",
+      instansi_produsen_data: item.instansi_produsen_data ?? "",
+      keterangan: item.keterangan ?? "",
+      target:
+        item.target?.length
+          ? item.target
+          : [
+              {
+                tahun: new Date().getFullYear().toString(),
+                satuan: "",
+                target: "",
+              },
+            ],
     });
     setOpenModalEdit(true);
   };
 
-  // ✅ Delete handler
+  // === Delete handler (ikut header token) ===
   const handleDelete = async (id: number) => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus data ini?")) return;
+    if (!authToken) {
+      alert("Sesi tidak valid. Silakan login ulang.");
+      return;
+    }
 
-    // TODO: ganti fetch url nya
     try {
-      const response = await fetch(
-        `https://alurkerja.zeabur.app/datakinerjapemda/${id}`,
+      const res = await fetch(
+        `${API_BASE}/alur-kerja/datakinerjapemda/${id}`,
         {
           method: "DELETE",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Session-Id": authToken,
+          },
+          cache: "no-store",
         }
       );
 
-      if (!response.ok) throw new Error("Gagal menghapus data dari server.");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       alert("✅ Data berhasil dihapus!");
       fetchData();
@@ -171,11 +188,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
         </h2>
 
         {/* DataTable */}
-        <DataTable
-          dataList={dataList}
-          onUpdate={handleEdit}
-          onDelete={handleDelete}
-        />
+        <DataTable dataList={dataList} onUpdate={handleEdit} onDelete={handleDelete} />
       </div>
 
       {/* Modal Tambah */}
