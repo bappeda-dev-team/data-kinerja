@@ -16,7 +16,7 @@ const slugify = (text: string) =>
 
 const JenisDataTable = ({ jenisDataList, onDelete }: JenisDataTableProps) => {
   const pathname = usePathname();
-  const isPemdaRoute = pathname?.startsWith('/pemda');
+  const isOpdRoute = pathname?.startsWith('/opd'); // ← ubah dari pemda ke opd
 
   return (
     <div className="overflow-x-auto">
@@ -39,7 +39,7 @@ const JenisDataTable = ({ jenisDataList, onDelete }: JenisDataTableProps) => {
                   <td className="p-3 border border-gray-300">
                     <div className="flex flex-col items-center gap-2 px-4">
                       <Link
-                        href={`${isPemdaRoute ? '/pemda' : '/opd'}/jenis-data/${item.id}`}
+                        href={`${isOpdRoute ? '/opd' : '/opd'}/jenis-data/${item.id}`} // ← semua rute diarahkan ke /opd
                         className="w-full"
                       >
                         <button className="bg-gradient-to-r from-green-500 to-teal-500 text-white px-4 py-1 rounded hover:opacity-90 transition-opacity w-full">

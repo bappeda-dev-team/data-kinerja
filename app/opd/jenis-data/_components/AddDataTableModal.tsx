@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   useForm,
   Control,
@@ -10,7 +10,7 @@ import {
   useFieldArray,
 } from "react-hook-form";
 import Select from "react-select";
-import { getCookie } from "@/app/components/lib/Cookie";
+import { getCookie, getSessionId } from "@/app/components/lib/Cookie";
 
 type ModalProps = {
   isOpen: boolean;
@@ -23,19 +23,12 @@ interface JenisDataOption {
   id: number;
   jenis_data: string;
 }
-
 interface OptionType {
   value: string;
   label: string;
 }
-
 type CategoryValue = "periode" | "tahun";
-
-type TargetRow = {
-  tahun: string;
-  target: string;
-  satuan: string;
-};
+type TargetRow = { tahun: string; target: string; satuan: string };
 
 interface FormValue {
   jenis_data_id: OptionType | null;
@@ -43,18 +36,16 @@ interface FormValue {
   rumus_perhitungan: string;
   sumber_data: string;
   instansi_produsen_data: string;
-
-  // hanya satu yang aktif sesuai mode
   periode: OptionType | null;
   tahun: OptionType | null;
-
-  // tabel dinamis
   targets: TargetRow[];
-
   keterangan: string;
 }
 
-/** Helper: parse cookie react-select (JSON string) */
+/* ================= helpers ================= */
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ?? "https://testapi.kertaskerja.cc/api/v1";
+
 const safeParseOption = (v: string | null | undefined): OptionType | null => {
   if (!v) return null;
   try {
@@ -64,16 +55,11 @@ const safeParseOption = (v: string | null | undefined): OptionType | null => {
   return null;
 };
 
-/** Helper: parse "2031-2036" / "2031–2036" */
 const parseRange = (label: string) => {
   const m = label.match(/(\d{4}).*?(\d{4})/);
-  return {
-    start: m ? parseInt(m[1], 10) : NaN,
-    end: m ? parseInt(m[2], 10) : NaN,
-  };
+  return { start: m ? parseInt(m[1], 10) : NaN, end: m ? parseInt(m[2], 10) : NaN };
 };
 
-/** Helper: list tahun dari label periode */
 const yearsFromPeriodeLabel = (label: string): string[] => {
   const { start, end } = parseRange(label);
   if (Number.isNaN(start) || Number.isNaN(end) || start > end) return [];
@@ -82,6 +68,18 @@ const yearsFromPeriodeLabel = (label: string): string[] => {
   return arr;
 };
 
+// ambil kode_opd dari cookie PageHeader: selectedDinas = {value,label}
+const getKodeOpdFromCookie = (): string | null => {
+  const raw = getCookie("selectedDinas");
+  try {
+    const obj = raw ? JSON.parse(raw) : null;
+    return obj?.value ?? null; // value = kode_opd
+  } catch {
+    return null;
+  }
+};
+/* =========================================== */
+
 const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalProps) => {
   const {
     handleSubmit,
@@ -89,7 +87,6 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
     reset,
     setValue,
     getValues,
-    watch,
     formState: { errors },
   } = useForm<FormValue>({
     defaultValues: {
@@ -100,75 +97,89 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
       instansi_produsen_data: "",
       periode: null,
       tahun: null,
-      targets: [], // tabel dinamis
+      targets: [],
       keterangan: "",
     },
   });
 
-  // FieldArray untuk tabel
-  const { fields, replace } = useFieldArray({
-    control,
-    name: "targets",
-  });
+  const { fields, replace } = useFieldArray({ control, name: "targets" });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jenisDataOptions, setJenisDataOptions] = useState<OptionType[]>([]);
   const [isLoadingJenisData, setIsLoadingJenisData] = useState(false);
-
-  // Mode form (ikut header cookie): "periode" | "tahun"
   const [mode, setMode] = useState<CategoryValue>("periode");
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
-  // ============== INIT DARI COOKIE HEADER ==============
+  useEffect(() => {
+    try {
+      setAuthToken(getSessionId());
+    } catch {
+      setAuthToken(null);
+    }
+  }, []);
+
+  // init dari cookie header (kategori + periode/tahun + generate baris tabel)
   useEffect(() => {
     if (!isOpen) return;
 
-    const selectedCategory = safeParseOption(getCookie("selectedCategory")); // {value:'periode'|'tahun'}
-    const periodeCookie = safeParseOption(getCookie("selectedPeriode"));     // {value:'...', label:'YYYY-YYYY'}
+    const selectedCategory = safeParseOption(getCookie("selectedCategory"));
+    const periodeCookie = safeParseOption(getCookie("selectedPeriode"));
     const yearCookie = getCookie("selectedYear") || "";
 
-    // Tentukan mode
-    const inferredMode: CategoryValue =
+    const inferred: CategoryValue =
       selectedCategory && (selectedCategory.value === "tahun" || selectedCategory.value === "periode")
         ? (selectedCategory.value as CategoryValue)
-        : (yearCookie ? "tahun" : "periode");
-    setMode(inferredMode);
+        : yearCookie ? "tahun" : "periode";
+    setMode(inferred);
 
-    // Prefill selector Periode/Tahun (hanya untuk dipamerkan di form; sumber utama tetap dari header)
-    if (periodeCookie) setValue("periode", periodeCookie);
-    else setValue("periode", null);
+    if (periodeCookie) setValue("periode", periodeCookie); else setValue("periode", null);
+    if (yearCookie) setValue("tahun", { value: yearCookie, label: yearCookie }); else setValue("tahun", null);
 
-    if (yearCookie) setValue("tahun", { value: yearCookie, label: yearCookie });
-    else setValue("tahun", null);
-
-    // Bangun baris tabel sesuai mode
-    if (inferredMode === "periode" && periodeCookie) {
-      const years = yearsFromPeriodeLabel(periodeCookie.label);
-      replace(years.map((y) => ({ tahun: y, target: "", satuan: "" })));
-    } else if (inferredMode === "tahun" && yearCookie) {
+    if (inferred === "periode" && periodeCookie) {
+      const ys = yearsFromPeriodeLabel(periodeCookie.label);
+      replace(ys.map((y) => ({ tahun: y, target: "", satuan: "" })));
+    } else if (inferred === "tahun" && yearCookie) {
       replace([{ tahun: yearCookie, target: "", satuan: "" }]);
     } else {
-      replace([]); // fallback aman
+      replace([]);
     }
   }, [isOpen, replace, setValue]);
 
-  // Ambil jenis data untuk select
+  /* ========== GET Jenis Data OPD (sesuai gambar: /jenisdataopd/list/{kode_opd}) ========== */
   const fetchJenisData = async () => {
     setIsLoadingJenisData(true);
     try {
-      const response = await fetch("https://alurkerja.zeabur.app/jenisdata");
-      if (!response.ok) throw new Error("Gagal mengambil daftar jenis data");
-      const result = await response.json();
-      const options = (result.data as JenisDataOption[]).map((item) => ({
-        value: item.id.toString(),
-        label: item.jenis_data,
+      const kode_opd = getKodeOpdFromCookie();
+      if (!kode_opd) throw new Error("Kode OPD belum dipilih pada header");
+
+      const res = await fetch(`${API_BASE}/jenisdataopd/list/${kode_opd}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          ...(authToken ? { "X-Session-Id": authToken } : {}),
+        },
+        cache: "no-store",
+      });
+
+      const ct = res.headers.get("content-type") || "";
+      const raw = await res.text();
+      if (!ct.includes("application/json")) throw new Error(`Non-JSON response: ${raw.slice(0, 120)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
+
+      const json = JSON.parse(raw);
+      const options: OptionType[] = (json.data ?? []).map((it: JenisDataOption) => ({
+        value: String(it.id),
+        label: it.jenis_data,
       }));
       setJenisDataOptions(options);
 
-      // preselect dari prop
-      const selectedOption = options.find((opt) => opt.value === jenisDataId);
-      if (selectedOption) setValue("jenis_data_id", selectedOption);
-    } catch (error) {
-      console.error("Fetch Jenis Data Error:", error);
+      // preselect sesuai prop
+      const selected = options.find((o) => o.value === jenisDataId);
+      if (selected) setValue("jenis_data_id", selected);
+    } catch (err) {
+      console.error("Fetch Jenis Data OPD gagal:", err);
+      setJenisDataOptions([]);
     } finally {
       setIsLoadingJenisData(false);
     }
@@ -176,9 +187,9 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
 
   useEffect(() => {
     if (isOpen) fetchJenisData();
-  }, [isOpen]);
+  }, [isOpen, authToken]);
 
-  // ============== SUBMIT ==============
+  /* ====================== SUBMIT (tetap ke Data Kinerja OPD create) ====================== */
   const onSubmit: SubmitHandler<FormValue> = async (data) => {
     setIsSubmitting(true);
 
@@ -189,36 +200,31 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
       instansi_produsen_data: data.instansi_produsen_data,
       keterangan: data.keterangan,
       jenis_data_id: parseInt(data.jenis_data_id!.value, 10),
-      target: data.targets.map((t) => ({
-        tahun: t.tahun,
-        satuan: t.satuan,
-        target: t.target,
-      })),
+      target: data.targets.map((t) => ({ tahun: t.tahun, satuan: t.satuan, target: t.target })),
     };
 
     try {
-      const response = await fetch("https://alurkerja.zeabur.app/datakinerjaopd", {
+      const res = await fetch(`${API_BASE}/datakinerjaopd`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          ...(authToken ? { "X-Session-Id": authToken } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Terjadi kesalahan pada server`);
+      if (!res.ok) {
+        const raw = await res.text();
+        throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
       }
 
       alert("Data Kinerja berhasil disimpan!");
       onSuccess();
       handleClose();
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error("Error saat kirim data:", error);
-        alert(`Gagal menyimpan data: ${error.message}`);
-      } else {
-        console.error("Error saat kirim data:", error);
-        alert("Gagal menyimpan data: unknown error");
-      }
+    } catch (err: any) {
+      console.error("Error saat kirim data:", err);
+      alert(`Gagal menyimpan data: ${err?.message ?? "unknown error"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -231,65 +237,33 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
 
   if (!isOpen) return null;
 
+  /* ==================== UI (tidak diubah) ==================== */
   return (
-    <div
-      className="fixed inset-0 flex justify-center items-center z-50 p-4"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-    >
-      <div
-        className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 flex justify-center items-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
+      <div className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="p-5 border-b">
           <h3 className="text-xl font-bold text-center text-gray-800">TAMBAH DATA KINERJA</h3>
         </div>
 
         <div className="p-8">
-          <div className="mb-4 text-sm text-gray-600">
-            Mode input mengikuti header: <span className="font-semibold uppercase">{mode}</span>
-          </div>
+          <div className="mb-4 text-sm text-gray-600">Mode input mengikuti header: <span className="font-semibold uppercase">{mode}</span></div>
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-4">
-              <SelectField
-                control={control}
-                name="jenis_data_id"
-                label="Jenis Kelompok Data"
-                options={jenisDataOptions}
-                error={errors.jenis_data_id?.message as any}
-                isLoading={isLoadingJenisData}
-              />
-
+              <SelectField control={control} name="jenis_data_id" label="Jenis Kelompok Data" options={jenisDataOptions} error={errors.jenis_data_id?.message as any} isLoading={isLoadingJenisData} />
               <InputField control={control} name="nama_data" label="Nama Data" error={errors.nama_data?.message as any} />
               <InputField control={control} name="rumus_perhitungan" label="Rumus Perhitungan" error={errors.rumus_perhitungan?.message as any} isTextarea />
               <InputField control={control} name="sumber_data" label="Sumber Data" error={errors.sumber_data?.message as any} />
               <InputField control={control} name="instansi_produsen_data" label="Instansi Produsen Data" error={errors.instansi_produsen_data?.message as any} />
 
-              {/* Penunjuk Periode/Tahun (read-only mengikuti header) */}
               {mode === "periode" ? (
-                <SelectField
-                  control={control}
-                  name="periode"
-                  label="Periode/Tahun"
-                  options={getValues("periode") ? [getValues("periode") as OptionType] : []}
-                  error={errors.periode?.message as any}
-                  isDisabled
-                />
+                <SelectField control={control} name="periode" label="Periode/Tahun" options={getValues("periode") ? [getValues("periode") as OptionType] : []} error={errors.periode?.message as any} isDisabled />
               ) : (
-                <SelectField
-                  control={control}
-                  name="tahun"
-                  label="Periode/Tahun"
-                  options={getValues("tahun") ? [getValues("tahun") as OptionType] : []}
-                  error={errors.tahun?.message as any}
-                  isDisabled
-                />
+                <SelectField control={control} name="tahun" label="Periode/Tahun" options={getValues("tahun") ? [getValues("tahun") as OptionType] : []} error={errors.tahun?.message as any} isDisabled />
               )}
 
-              {/* =================== TABEL DINAMIS =================== */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Target per Tahun:</label>
-
                 {fields.length === 0 ? (
                   <p className="text-gray-500 text-sm">Tidak ada tahun untuk diinput.</p>
                 ) : (
@@ -306,40 +280,17 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
                         {fields.map((row, idx) => (
                           <tr key={row.id} className="odd:bg-white even:bg-gray-50">
                             <td className="p-2 border">
-                              {/* Tahun dikunci dari header (read-only) */}
-                              <input
-                                className="w-full p-2 border rounded bg-gray-100"
-                                value={row.tahun}
-                                readOnly
-                              />
+                              <input className="w-full p-2 border rounded bg-gray-100" value={row.tahun} readOnly />
                             </td>
                             <td className="p-2 border">
-                              <Controller
-                                control={control}
-                                name={`targets.${idx}.target`}
-                                rules={{ required: "Target tidak boleh kosong" }}
-                                render={({ field }) => (
-                                  <input
-                                    {...field}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    placeholder="Masukkan Nilai Target"
-                                  />
-                                )}
-                              />
+                              <Controller control={control} name={`targets.${idx}.target`} rules={{ required: "Target tidak boleh kosong" }} render={({ field }) => (
+                                <input {...field} className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Masukkan Nilai Target" />
+                              )} />
                             </td>
                             <td className="p-2 border">
-                              <Controller
-                                control={control}
-                                name={`targets.${idx}.satuan`}
-                                rules={{ required: "Satuan tidak boleh kosong" }}
-                                render={({ field }) => (
-                                  <input
-                                    {...field}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    placeholder="Misal: persen"
-                                  />
-                                )}
-                              />
+                              <Controller control={control} name={`targets.${idx}.satuan`} rules={{ required: "Satuan tidak boleh kosong" }} render={({ field }) => (
+                                <input {...field} className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Misal: persen" />
+                              )} />
                             </td>
                           </tr>
                         ))}
@@ -348,24 +299,15 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
                   </div>
                 )}
               </div>
-              {/* ====================================================== */}
 
               <InputField control={control} name="keterangan" label="Keterangan" error={errors.keterangan?.message as any} isTextarea />
             </div>
 
             <div className="flex flex-col gap-4 mt-8">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
+              <button type="submit" disabled={isSubmitting} className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 transition-opacity disabled:opacity-50">
                 {isSubmitting ? "Menyimpan..." : "Simpan"}
               </button>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-red-500 to-pink-500 hover:opacity-90 transition-opacity"
-              >
+              <button type="button" onClick={handleClose} className="w-full font-bold py-3 px-8 rounded-lg text-white bg-gradient-to-r from-red-500 to-pink-500 hover:opacity-90 transition-opacity">
                 Batal
               </button>
             </div>
@@ -376,7 +318,7 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
   );
 };
 
-/* ---------------- Helper Fields ---------------- */
+/* ---------------- Helper Fields (tetap) ---------------- */
 interface InputFieldProps<TFormValues extends FieldValues> {
   control: Control<TFormValues>;
   name: keyof TFormValues;
@@ -385,44 +327,18 @@ interface InputFieldProps<TFormValues extends FieldValues> {
   isTextarea?: boolean;
   type?: string;
 }
-const InputField = ({
-  control,
-  name,
-  label,
-  error,
-  isTextarea = false,
-  type = "text",
-}: InputFieldProps<FormValue>) => (
+const InputField = ({ control, name, label, error, isTextarea = false, type = "text" }: InputFieldProps<FormValue>) => (
   <div>
-    <label htmlFor={name as string} className="block text-sm font-bold text-gray-700 mb-2">
-      {label}:
-    </label>
+    <label htmlFor={name as string} className="block text-sm font-bold text-gray-700 mb-2">{label}:</label>
     <Controller
       name={name as any}
       control={control}
       rules={{ required: `${label} tidak boleh kosong` }}
       render={({ field }) =>
         isTextarea ? (
-          <textarea
-            {...field}
-            id={name as string}
-            placeholder={`Masukkan ${label}`}
-            className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${
-              error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-            }`}
-            value={field.value ? String(field.value) : ""}
-          />
+          <textarea {...field} id={name as string} placeholder={`Masukkan ${label}`} className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"}`} value={field.value ? String(field.value) : ""} />
         ) : (
-          <input
-            {...field}
-            id={name as string}
-            type={type}
-            placeholder={`Masukkan ${label}`}
-            className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${
-              error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-            }`}
-            value={field.value === null || typeof field.value === "object" ? "" : (field.value as string)}
-          />
+          <input {...field} id={name as string} type={type} placeholder={`Masukkan ${label}`} className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"}`} value={field.value === null || typeof field.value === "object" ? "" : (field.value as string)} />
         )
       }
     />
@@ -440,20 +356,9 @@ interface SelectFieldProps<TFormValues extends FieldValues> {
   isLoading?: boolean;
   isDisabled?: boolean;
 }
-const SelectField = ({
-  control,
-  name,
-  label,
-  options,
-  error,
-  onMenuOpen,
-  isLoading,
-  isDisabled,
-}: SelectFieldProps<FormValue>) => (
+const SelectField = ({ control, name, label, options, error, onMenuOpen, isLoading, isDisabled }: SelectFieldProps<FormValue>) => (
   <div>
-    <label htmlFor={name as string} className="block text-sm font-bold text-gray-700 mb-2">
-      {label}:
-    </label>
+    <label htmlFor={name as string} className="block text-sm font-bold text-gray-700 mb-2">{label}:</label>
     <Controller
       name={name as any}
       control={control}

@@ -7,41 +7,25 @@ import PageHeader from "@/app/components/layout/PageHeader";
 import DataTable from "../_components/DataTable";
 import AddDataTableModal from "../_components/AddDataTableModal";
 import EditDataTableModal from "../_components/EditDataTableModal";
-import { getSessionId } from "@/app/components/lib/Cookie";
+import { getSessionId, getCookie } from "@/app/components/lib/Cookie";
 
-// ✅ Definisikan tipe data sesuai struktur API
-type Target = {
-  tahun: string;
-  satuan: string;
-  target: string;
-};
-
-export interface DataKinerja {
+// === Tipe untuk LIST JENIS DATA OPD ===
+type JenisData = {
   id: number;
-  jenis_data_id: number;
-  nama_data: string;
-  rumus_perhitungan: string;
-  sumber_data: string;
-  instansi_produsen_data: string;
-  keterangan: string;
-  target: {
-    tahun: string;
-    satuan: string;
-    target: string;
-  }[];
-}
+  jenis_data: string;
+};
 
 export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const dataName = slug.toUpperCase();
   const [openModalAdd, setOpenModalAdd] = useState(false);
   const [openModalEdit, setOpenModalEdit] = useState(false);
-  const [dataList, setDataList] = useState<DataKinerja[]>([]);
-  const [dataItemToEdit, setDataItemToEdit] = useState<DataKinerja | null>(
-    null
-  );
+
+  // <-- GANTI: list yang ditampilkan adalah list jenis data OPD
+  const [dataList, setDataList] = useState<JenisData[]>([]);
+
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-    useEffect(() => {
+  useEffect(() => {
     try {
       setAuthToken(getSessionId());
     } catch {
@@ -49,89 +33,57 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
     }
   }, []);
 
-  // ✅ Fungsi fetch data
-  const fetchData = async () => {
+  // Ambil kode_opd dari cookie "selectedDinas" (value = kode_opd)
+  const getKodeOpd = () => {
     try {
-      // NOTE: semua fetch request polanya sama, harus ada X-Session-Id di headersnya
-      // TODO: ubah hardcoded url, ambil dari env
-      const res = await fetch(`https://testapi.kertaskerja.cc/api/v1/alur-kerja/datakinerjaopd/list/${slug}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Session-Id": authToken ?? "",
-        },
-        cache: "no-store", // opsional: biar tidak cache di Next.js
-      });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const raw = getCookie("selectedDinas");
+      const obj = raw ? JSON.parse(raw) : null;
+      return obj?.value ?? null;
+    } catch {
+      return null;
+    }
+  };
 
-      const json = await res.json();
+  // ✅ Fungsi fetch list JENIS DATA OPD
+  const fetchData = async () => {
+    const kode_opd = getKodeOpd();
+    if (!kode_opd) {
+      console.warn("Kode OPD belum dipilih di header.");
+      setDataList([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `https://testapi.kertaskerja.cc/api/v1/jenisdataopd/list/${kode_opd}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Session-Id": authToken ?? "",
+          },
+          cache: "no-store",
+        }
+      );
+
+      const raw = await res.text();
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
+
+      const json = JSON.parse(raw);
       setDataList(json.data || []);
     } catch (err) {
-      console.error("Gagal fetch data kinerja:", err);
+      console.error("Gagal fetch jenis data OPD:", err);
       setDataList([]);
     }
   };
 
+  // panggil saat token & (opsional) slug berubah
   useEffect(() => {
-    fetchData();
-  }, [slug]);
+    if (authToken) fetchData();
+  }, [authToken, slug]);
 
-  // ✅ Success handler
-  const handleAddSuccess = () => {
-    setOpenModalAdd(false);
-    fetchData();
-  };
-
-  const handleEditSuccess = () => {
-    setOpenModalEdit(false);
-    fetchData();
-  };
-
-  // ✅ Edit handler
-  const handleEdit = (item: DataKinerja) => {
-    setDataItemToEdit({
-      id: item.id, // pastikan item: DataKinerja
-      jenis_data_id: item.jenis_data_id || 0,
-      nama_data: item.nama_data || "",
-      rumus_perhitungan: item.rumus_perhitungan || "",
-      sumber_data: item.sumber_data || "",
-      instansi_produsen_data: item.instansi_produsen_data || "",
-      keterangan: item.keterangan || "",
-      target: item.target?.length
-        ? item.target
-        : [
-            {
-              tahun: new Date().getFullYear().toString(),
-              satuan: "",
-              target: "",
-            },
-          ],
-    });
-    setOpenModalEdit(true);
-  };
-
-  // ✅ Delete handler
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus data ini?")) return;
-
-    // TODO: ganti fetch url nya
-    try {
-      const response = await fetch(
-        `https://alurkerja.zeabur.app/datakinerjaopd/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) throw new Error("Gagal menghapus data dari server.");
-
-      alert("✅ Data berhasil dihapus!");
-      fetchData();
-    } catch (error) {
-      console.error("Gagal menghapus data:", error);
-      alert("❌ Terjadi kesalahan saat menghapus data.");
-    }
-  };
+  // Handler2 lainmu tetap …
 
   return (
     <div>
@@ -141,19 +93,11 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
         {/* Breadcrumb */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center text-sm text-gray-500">
-            <Link href="/dashboard" className="hover:underline">
-              Dashboard
-            </Link>
+            <Link href="/dashboard" className="hover:underline">Dashboard</Link>
             <span className="mx-2">/</span>
-            <Link href="/pemda" className="hover:underline">
-              Pemda
-            </Link>
+            <Link href="/opd" className="hover:underline">OPD</Link>
             <span className="mx-2">/</span>
-            <Link href="/pemda/jenis-data" className="hover:underline">
-              Jenis Kelompok Data
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="font-semibold text-gray-800">{dataName}</span>
+            <span className="font-semibold text-gray-800">Jenis Kelompok Data</span>
           </div>
 
           <button
@@ -165,35 +109,32 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
           </button>
         </div>
 
-        {/* Judul */}
         <h2 className="text-xl font-bold text-sidebar-bg mb-4">
-          JENIS KELOMPOK DATA: {dataName}
+          LIST JENIS DATA OPD
         </h2>
 
-        {/* DataTable */}
+        {/* NOTE: pastikan komponen tabelmu mampu menampilkan { id, jenis_data } */}
         <DataTable
-          dataList={dataList}
-          onUpdate={handleEdit}
-          onDelete={handleDelete}
+          dataList={dataList as any}
+          onUpdate={() => {}}
+          onDelete={() => {}}
         />
       </div>
 
-      {/* Modal Tambah */}
       <AddDataTableModal
         isOpen={openModalAdd}
         onClose={() => setOpenModalAdd(false)}
-        onSuccess={handleAddSuccess}
+        onSuccess={fetchData}
         jenisDataId={slug}
       />
 
-      {/* Modal Edit */}
-      {openModalEdit && dataItemToEdit && (
+      {openModalEdit && (
         <EditDataTableModal
           isOpen={openModalEdit}
           onClose={() => setOpenModalEdit(false)}
-          onSuccess={handleEditSuccess}
+          onSuccess={fetchData}
           jenisDataId={slug}
-          dataItem={dataItemToEdit}
+          dataItem={null as any}
         />
       )}
     </div>

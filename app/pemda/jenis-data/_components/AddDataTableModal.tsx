@@ -261,7 +261,7 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
               />
 
               <InputField control={control} name="nama_data" label="Nama Data" error={errors.nama_data?.message as any} />
-              <InputField control={control} name="rumus_perhitungan" label="Rumus Perhitungan" error={errors.rumus_perhitungan?.message as any} isTextarea />
+              <InputField control={control} name="rumus_perhitungan" label="Definisi Operasional" error={errors.rumus_perhitungan?.message as any} isTextarea />
               <InputField control={control} name="sumber_data" label="Sumber Data" error={errors.sumber_data?.message as any} />
               <InputField control={control} name="instansi_produsen_data" label="Instansi Produsen Data" error={errors.instansi_produsen_data?.message as any} />
 
@@ -288,7 +288,7 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
 
               {/* =================== TABEL DINAMIS =================== */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Target per Tahun:</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Jumlah per Tahun:</label>
 
                 {fields.length === 0 ? (
                   <p className="text-gray-500 text-sm">Tidak ada tahun untuk diinput.</p>
@@ -298,7 +298,7 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
                       <thead className="bg-gray-100">
                         <tr>
                           <th className="p-2 border text-left w-28">Tahun</th>
-                          <th className="p-2 border text-left">Target</th>
+                          <th className="p-2 border text-left">Jumlah</th>
                           <th className="p-2 border text-left w-40">Satuan</th>
                         </tr>
                       </thead>
@@ -350,7 +350,7 @@ const AddDataTableModal = ({ isOpen, onClose, onSuccess, jenisDataId }: ModalPro
               </div>
               {/* ====================================================== */}
 
-              <InputField control={control} name="keterangan" label="Keterangan" error={errors.keterangan?.message as any} isTextarea />
+              <InputField control={control} name="keterangan" label="Keterangan/Narasi" error={errors.keterangan?.message as any} isTextarea />
             </div>
 
             <div className="flex flex-col gap-4 mt-8">

@@ -79,7 +79,7 @@ const Table = () => {
           <tr className="bg-emerald-500 text-white text-sm">
             <th className="border-r border-b px-4 py-3">No</th>
             <th className="border-r border-b px-4 py-3">Nama</th>
-            <th className="border-r border-b px-4 py-3">NIP</th>
+            <th className="border-r border-b px-4 py-3">User</th>
             <th className="border-r border-b px-4 py-3">Email</th>
             <th className="border-r border-b px-4 py-3">Status</th>
             <th className="border-b px-4 py-3">Roles</th>

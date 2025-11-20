@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { getSessionId } from "@/app/components/lib/Cookie";
 
 interface DataKinerja {
   id: number;
@@ -10,11 +11,7 @@ interface DataKinerja {
   sumber_data: string;
   instansi_produsen_data: string;
   keterangan: string;
-  target: {
-    tahun: string | number;
-    satuan: string;
-    target: string | number;
-  }[];
+  target: { tahun: string | number; satuan: string; target: string | number }[];
 }
 
 interface ModalProps {
@@ -37,13 +34,27 @@ interface FormData {
   target: string | number;
 }
 
+// === konsisten dengan service lain ===
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "https://testapi.kertaskerja.cc/api/v1";
+// endpoint sesuai gambar: /datakinerjaopd/{id}
+// kalau backend-mu meletakkan di namespace "alur-kerja", pakai: `${API_BASE}/alur-kerja/datakinerjaopd/...`
+
 const EditDataTableModal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
   dataItem,
-  jenisDataId,
 }) => {
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      setAuthToken(getSessionId());
+    } catch {
+      setAuthToken(null);
+    }
+  }, []);
+
   const [formData, setFormData] = useState<FormData>({
     jenis_data_id: "",
     nama_data: "",
@@ -80,7 +91,12 @@ const EditDataTableModal: React.FC<ModalProps> = ({
 
   const handleSubmit = async () => {
     if (!dataItem) return;
+    if (!authToken) {
+      alert("Sesi tidak valid. Silakan login ulang.");
+      return;
+    }
 
+    // payload mengikuti kontrak: target berupa array {tahun,satuan,target}
     const payload = {
       jenis_data_id: formData.jenis_data_id,
       nama_data: formData.nama_data,
@@ -99,22 +115,30 @@ const EditDataTableModal: React.FC<ModalProps> = ({
 
     try {
       const res = await fetch(
-        `https://alurkerja.zeabur.app/datakinerjaopd/${dataItem.id}`,
+        // sesuai gambar: PUT /datakinerjaopd/{id}
+        `${API_BASE}/datakinerjaopd/${dataItem.id}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Session-Id": authToken,
+          },
           body: JSON.stringify(payload),
+          cache: "no-store",
         }
       );
 
+      const raw = await res.text();
       if (!res.ok) {
-        throw new Error(`Gagal update, status: ${res.status}`);
+        throw new Error(`HTTP ${res.status} – ${raw.slice(0, 200)}`);
       }
 
       await onSuccess();
       onClose();
     } catch (err) {
       console.error("Gagal update:", err);
+      alert("Gagal memperbarui data.");
     }
   };
 
@@ -137,66 +161,22 @@ const EditDataTableModal: React.FC<ModalProps> = ({
         </div>
         <div className="p-8">
           <div className="space-y-3">
-            <input
-              type="hidden"
-              name="jenis_data_id"
-              value={formData.jenis_data_id}
-            />
+            <input type="hidden" name="jenis_data_id" value={formData.jenis_data_id} />
 
-            {/* Nama Data */}
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Nama Data:
-            </label>
-            <input
-              className="w-full border p-2 rounded"
-              name="nama_data"
-              value={formData.nama_data}
-              onChange={handleChange}
-            />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Nama Data:</label>
+            <input className="w-full border p-2 rounded" name="nama_data" value={formData.nama_data} onChange={handleChange} />
 
-            {/* Rumus Perhitungan */}
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Rumus Perhitungan:
-            </label>
-            <input
-              className="w-full border p-2 rounded"
-              name="rumus_perhitungan"
-              value={formData.rumus_perhitungan}
-              onChange={handleChange}
-            />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Rumus Perhitungan:</label>
+            <input className="w-full border p-2 rounded" name="rumus_perhitungan" value={formData.rumus_perhitungan} onChange={handleChange} />
 
-            {/* Sumber Data */}
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Sumber Data:
-            </label>
-            <input
-              className="w-full border p-2 rounded"
-              name="sumber_data"
-              value={formData.sumber_data}
-              onChange={handleChange}
-            />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Sumber Data:</label>
+            <input className="w-full border p-2 rounded" name="sumber_data" value={formData.sumber_data} onChange={handleChange} />
 
-            {/* Instansi Produsen */}
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Instansi Produsen Data:
-            </label>
-            <input
-              className="w-full border p-2 rounded"
-              name="instansi_produsen_data"
-              value={formData.instansi_produsen_data}
-              onChange={handleChange}
-            />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Instansi Produsen Data:</label>
+            <input className="w-full border p-2 rounded" name="instansi_produsen_data" value={formData.instansi_produsen_data} onChange={handleChange} />
 
-            {/* Tahun */}
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Tahun:
-            </label>
-            <select
-              className="w-full border p-2 rounded"
-              name="tahun"
-              value={formData.tahun}
-              onChange={handleChange}
-            >
+            <label className="block text-sm font-bold text-gray-700 mb-2">Tahun:</label>
+            <select className="w-full border p-2 rounded" name="tahun" value={formData.tahun} onChange={handleChange}>
               <option value="">Pilih Tahun</option>
               {Array.from({ length: 10 }, (_, i) => {
                 const year = new Date().getFullYear() - i;
@@ -208,52 +188,19 @@ const EditDataTableModal: React.FC<ModalProps> = ({
               })}
             </select>
 
-            {/* Target */}
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Target:
-            </label>
-            <input
-              className="w-full border p-2 rounded"
-              name="target"
-              value={formData.target}
-              onChange={handleChange}
-            />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Target:</label>
+            <input className="w-full border p-2 rounded" name="target" value={formData.target} onChange={handleChange} />
 
-            {/* Satuan */}
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Satuan:
-            </label>
-            <input
-              className="w-full border p-2 rounded"
-              name="satuan"
-              value={formData.satuan}
-              onChange={handleChange}
-            />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Satuan:</label>
+            <input className="w-full border p-2 rounded" name="satuan" value={formData.satuan} onChange={handleChange} />
 
-            {/* Keterangan */}
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Keterangan:
-            </label>
-            <input
-              className="w-full border p-2 rounded"
-              name="keterangan"
-              value={formData.keterangan}
-              onChange={handleChange}
-            />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Keterangan:</label>
+            <input className="w-full border p-2 rounded" name="keterangan" value={formData.keterangan} onChange={handleChange} />
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-2 mt-6">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
-            >
-              Batal
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="px-4 py-2 rounded text-white bg-gradient-to-r from-green-400 to-green-600 hover:opacity-90"
-            >
+            <button onClick={onClose} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Batal</button>
+            <button onClick={handleSubmit} className="px-4 py-2 rounded text-white bg-gradient-to-r from-green-400 to-green-600 hover:opacity-90">
               Simpan
             </button>
           </div>
