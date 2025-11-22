@@ -154,9 +154,9 @@ const EditDataTableModal: React.FC<ModalProps> = ({
               onChange={handleChange}
             />
 
-            {/* Rumus Perhitungan */}
+            {/* Definisi Operasional (Rumus Perhitungan) */}
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Rumus Perhitungan:
+              Definisi Operasional:
             </label>
             <input
               className="w-full border p-2 rounded"
@@ -208,9 +208,9 @@ const EditDataTableModal: React.FC<ModalProps> = ({
               })}
             </select>
 
-            {/* Target */}
+            {/* Jumlah (Target) */}
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Target:
+              Jumlah:
             </label>
             <input
               className="w-full border p-2 rounded"
@@ -230,9 +230,9 @@ const EditDataTableModal: React.FC<ModalProps> = ({
               onChange={handleChange}
             />
 
-            {/* Keterangan */}
+            {/* Keterangan/Narasi */}
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Keterangan:
+              Keterangan/Narasi:
             </label>
             <input
               className="w-full border p-2 rounded"

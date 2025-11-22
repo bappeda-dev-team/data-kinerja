@@ -35,9 +35,8 @@ interface FormData {
 }
 
 // === konsisten dengan service lain ===
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "https://testapi.kertaskerja.cc/api/v1";
-// endpoint sesuai gambar: /datakinerjaopd/{id}
-// kalau backend-mu meletakkan di namespace "alur-kerja", pakai: `${API_BASE}/alur-kerja/datakinerjaopd/...`
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ?? "https://testapi.kertaskerja.cc/api/v1";
 
 const EditDataTableModal: React.FC<ModalProps> = ({
   isOpen,
@@ -114,20 +113,16 @@ const EditDataTableModal: React.FC<ModalProps> = ({
     };
 
     try {
-      const res = await fetch(
-        // sesuai gambar: PUT /datakinerjaopd/{id}
-        `${API_BASE}/datakinerjaopd/${dataItem.id}`,
-        {
-          method: "PUT",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            "X-Session-Id": authToken,
-          },
-          body: JSON.stringify(payload),
-          cache: "no-store",
-        }
-      );
+      const res = await fetch(`${API_BASE}/datakinerjaopd/${dataItem.id}`, {
+        method: "PUT",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Session-Id": authToken,
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
 
       const raw = await res.text();
       if (!res.ok) {
@@ -161,22 +156,62 @@ const EditDataTableModal: React.FC<ModalProps> = ({
         </div>
         <div className="p-8">
           <div className="space-y-3">
-            <input type="hidden" name="jenis_data_id" value={formData.jenis_data_id} />
+            <input
+              type="hidden"
+              name="jenis_data_id"
+              value={formData.jenis_data_id}
+            />
 
-            <label className="block text-sm font-bold text-gray-700 mb-2">Nama Data:</label>
-            <input className="w-full border p-2 rounded" name="nama_data" value={formData.nama_data} onChange={handleChange} />
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Nama Data:
+            </label>
+            <input
+              className="w-full border p-2 rounded"
+              name="nama_data"
+              value={formData.nama_data}
+              onChange={handleChange}
+            />
 
-            <label className="block text-sm font-bold text-gray-700 mb-2">Rumus Perhitungan:</label>
-            <input className="w-full border p-2 rounded" name="rumus_perhitungan" value={formData.rumus_perhitungan} onChange={handleChange} />
+            {/* Definisi Operasional (Rumus Perhitungan) */}
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Definisi Operasional:
+            </label>
+            <input
+              className="w-full border p-2 rounded"
+              name="rumus_perhitungan"
+              value={formData.rumus_perhitungan}
+              onChange={handleChange}
+            />
 
-            <label className="block text-sm font-bold text-gray-700 mb-2">Sumber Data:</label>
-            <input className="w-full border p-2 rounded" name="sumber_data" value={formData.sumber_data} onChange={handleChange} />
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Sumber Data:
+            </label>
+            <input
+              className="w-full border p-2 rounded"
+              name="sumber_data"
+              value={formData.sumber_data}
+              onChange={handleChange}
+            />
 
-            <label className="block text-sm font-bold text-gray-700 mb-2">Instansi Produsen Data:</label>
-            <input className="w-full border p-2 rounded" name="instansi_produsen_data" value={formData.instansi_produsen_data} onChange={handleChange} />
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Instansi Produsen Data:
+            </label>
+            <input
+              className="w-full border p-2 rounded"
+              name="instansi_produsen_data"
+              value={formData.instansi_produsen_data}
+              onChange={handleChange}
+            />
 
-            <label className="block text-sm font-bold text-gray-700 mb-2">Tahun:</label>
-            <select className="w-full border p-2 rounded" name="tahun" value={formData.tahun} onChange={handleChange}>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Tahun:
+            </label>
+            <select
+              className="w-full border p-2 rounded"
+              name="tahun"
+              value={formData.tahun}
+              onChange={handleChange}
+            >
               <option value="">Pilih Tahun</option>
               {Array.from({ length: 10 }, (_, i) => {
                 const year = new Date().getFullYear() - i;
@@ -188,19 +223,50 @@ const EditDataTableModal: React.FC<ModalProps> = ({
               })}
             </select>
 
-            <label className="block text-sm font-bold text-gray-700 mb-2">Target:</label>
-            <input className="w-full border p-2 rounded" name="target" value={formData.target} onChange={handleChange} />
+            {/* Jumlah (Target) */}
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Jumlah:
+            </label>
+            <input
+              className="w-full border p-2 rounded"
+              name="target"
+              value={formData.target}
+              onChange={handleChange}
+            />
 
-            <label className="block text-sm font-bold text-gray-700 mb-2">Satuan:</label>
-            <input className="w-full border p-2 rounded" name="satuan" value={formData.satuan} onChange={handleChange} />
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Satuan:
+            </label>
+            <input
+              className="w-full border p-2 rounded"
+              name="satuan"
+              value={formData.satuan}
+              onChange={handleChange}
+            />
 
-            <label className="block text-sm font-bold text-gray-700 mb-2">Keterangan:</label>
-            <input className="w-full border p-2 rounded" name="keterangan" value={formData.keterangan} onChange={handleChange} />
+            {/* Keterangan/Narasi */}
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Keterangan/Narasi:
+            </label>
+            <input
+              className="w-full border p-2 rounded"
+              name="keterangan"
+              value={formData.keterangan}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <button onClick={onClose} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Batal</button>
-            <button onClick={handleSubmit} className="px-4 py-2 rounded text-white bg-gradient-to-r from-green-400 to-green-600 hover:opacity-90">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-4 py-2 rounded text-white bg-gradient-to-r from-green-400 to-green-600 hover:opacity-90"
+            >
               Simpan
             </button>
           </div>
