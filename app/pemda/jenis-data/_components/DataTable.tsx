@@ -10,7 +10,9 @@ const safeParseOption = (v: string | null | undefined): RSOption | null => {
   if (!v) return null;
   try {
     const o = JSON.parse(v);
-    if (o && typeof o.value === "string" && typeof o.label === "string") return o;
+    if (o && typeof o.value === "string" && typeof o.label === "string") {
+      return o;
+    }
   } catch {}
   return null;
 };
@@ -39,12 +41,22 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
   const [mode, setMode] = useState<"periode" | "tahun" | null>(null);
   const [periodeLabel, setPeriodeLabel] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [selectedOpd, setSelectedOpd] = useState<RSOption | null>(null);
 
   // Baca cookies dari header dan tentukan mode + tahun yang ditampilkan
   useEffect(() => {
-    const cat = safeParseOption(getCookie("selectedCategory")); // {value:'periode'|'tahun',label:'...'}
-    const periode = safeParseOption(getCookie("selectedPeriode")); // {value:'..', label:'YYYY-YYYY'}
-    const year = getCookie("selectedYear") || "";
+    const catRaw = safeParseOption(getCookie("selectedCategory")); // {value:'periode'|'tahun',label:'...'}
+    const periodeRaw = safeParseOption(getCookie("selectedPeriode")); // {value:'..', label:'YYYY-YYYY'}
+    const opdRaw = safeParseOption(getCookie("selectedOpd")); // sesuaikan kalau nama cookie beda
+    const year = (getCookie("selectedYear") || "").trim();
+
+    // anggap yang value-nya kosong sebagai belum dipilih
+    const cat =
+      catRaw && catRaw.value ? (catRaw as RSOption) : null;
+    const periode =
+      periodeRaw && periodeRaw.value ? (periodeRaw as RSOption) : null;
+    const opd =
+      opdRaw && opdRaw.value ? (opdRaw as RSOption) : null;
 
     // tentukan mode: utamakan cookie kategori; fallback: ada selectedYear → 'tahun' else 'periode'
     const m =
@@ -57,6 +69,7 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
     setMode(m);
     setPeriodeLabel(periode?.label ?? null);
     setSelectedYear(year || null);
+    setSelectedOpd(opd ?? null);
     setChecked(true);
   }, []);
 
@@ -84,16 +97,22 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
   // anti-flicker: tunggu cek cookie dulu
   if (!checked) return null;
 
-  // guard: kalau filter header belum lengkap → sembunyikan tabel
-  const filterActive =
-    (mode === "periode" && !!periodeLabel) ||
-    (mode === "tahun" && !!selectedYear);
+  // guard: cuma tampil kalau OPD + Periode/Tahun bener2 keisi dan years > 0
+  const hasOpd = !!(selectedOpd && selectedOpd.value);
+  const hasPeriode =
+    mode === "periode" && !!periodeLabel && periodeLabel.trim() !== "";
+  const hasYear =
+    mode === "tahun" && !!selectedYear && selectedYear.trim() !== "";
 
-  if (!filterActive || years.length === 0) {
+  const filterActive = hasOpd && (hasPeriode || hasYear) && years.length > 0;
+
+  if (!filterActive) {
     return (
       <div className="border p-5 rounded-xl shadow-lg">
         <p className="text-center text-red-600 font-semibold">
-          Pilih <span className="underline">Periode/Tahun</span> di header terlebih dahulu!
+          Pilih <span className="underline">Dinas/OPD</span> dan{" "}
+          <span className="underline">Periode/Tahun</span> di header, lalu
+          klik <span className="underline">Aktifkan</span> terlebih dahulu.
         </p>
       </div>
     );
@@ -123,7 +142,10 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
             <th rowSpan={2} className="p-2 border border-gray-300 text-center">
               Instansi Produsen Data
             </th>
-            <th colSpan={years.length} className="p-2 border border-gray-300 text-center">
+            <th
+              colSpan={years.length}
+              className="p-2 border border-gray-300 text-center"
+            >
               Jumlah{" "}
               {mode === "periode" && periodeLabel
                 ? `(${periodeLabel.replace("–", "-")})`
@@ -161,7 +183,8 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
               // ambil satuan: prioritaskan satuan yang match tahun yang tampil; fallback ke target[0]
               const firstDisplayedYear = years[0];
               const satuanByYear =
-                row.target?.find((t) => t.tahun === firstDisplayedYear)?.satuan ??
+                row.target?.find((t) => t.tahun === firstDisplayedYear)
+                  ?.satuan ??
                 row.target?.[0]?.satuan ??
                 "-";
 

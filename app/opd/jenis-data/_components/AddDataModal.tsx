@@ -21,15 +21,18 @@ type CategoryValue = "periode" | "tahun";
 interface FormValue {
   jenis_data: string;
   periode: OptionType | null; // dipakai saat mode 'periode'
-  tahun: OptionType | null;   // dipakai saat mode 'tahun'
+  tahun: OptionType | null; // dipakai saat mode 'tahun'
 }
 
 // util: parse cookie Select(JSON)
-const safeParseOption = (v: string | null | undefined): { value?: string; label?: string } | null => {
+const safeParseOption = (
+  v: string | null | undefined
+): { value?: string; label?: string } | null => {
   if (!v) return null;
   try {
     const o = JSON.parse(v);
-    if (o && typeof o.value === "string" && typeof o.label === "string") return o;
+    if (o && typeof o.value === "string" && typeof o.label === "string")
+      return o;
   } catch {}
   return null;
 };
@@ -80,7 +83,8 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
       if (!Number.isNaN(end) && end > maxEnd) maxEnd = end;
     }
     const arr: OptionType[] = [];
-    for (let y = maxEnd; y >= minStart; y--) arr.push({ value: y, label: `Tahun ${y}` });
+    for (let y = maxEnd; y >= minStart; y--)
+      arr.push({ value: y, label: `Tahun ${y}` });
     return arr;
   }, [periodOptions]);
 
@@ -92,9 +96,12 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const periodeCookie = safeParseOption(getCookie("selectedPeriode"));
     const yearCookie = getCookie("selectedYear") || "";
 
-    const catVal = (catCookie?.value === "tahun" || catCookie?.value === "periode")
-      ? (catCookie.value as CategoryValue)
-      : (yearCookie ? "tahun" : "periode");
+    const catVal =
+      catCookie?.value === "tahun" || catCookie?.value === "periode"
+        ? (catCookie.value as CategoryValue)
+        : yearCookie
+        ? "tahun"
+        : "periode";
 
     setMode(catVal);
 
@@ -104,24 +111,44 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
         value: Number(periodeCookie.value ?? 0),
         label: periodeCookie.label!,
       };
-      setValue("periode", opt, { shouldDirty: false, shouldValidate: true });
+      setValue("periode", opt, {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
 
       // kalau ada yearCookie & masih in-range, isi juga field tahun
       const { start, end } = parseRange(opt.label);
       const yNum = Number(yearCookie);
-      if (!Number.isNaN(start) && !Number.isNaN(end) && yNum >= start && yNum <= end) {
-        setValue("tahun", { value: yNum, label: `Tahun ${yNum}` }, { shouldDirty: false, shouldValidate: true });
+      if (
+        !Number.isNaN(start) &&
+        !Number.isNaN(end) &&
+        yNum >= start &&
+        yNum <= end
+      ) {
+        setValue(
+          "tahun",
+          { value: yNum, label: `Tahun ${yNum}` },
+          { shouldDirty: false, shouldValidate: true }
+        );
       } else {
-        setValue("tahun", null, { shouldDirty: false, shouldValidate: true });
+        setValue("tahun", null, {
+          shouldDirty: false,
+          shouldValidate: true,
+        });
       }
     } else {
       // tidak ada cookie periode
-      setValue("periode", null, { shouldDirty: false, shouldValidate: true });
+      setValue("periode", null, {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
       // Tahun tetap bisa terisi kalau mode 'tahun' & ada cookie tahun
       const yNum = Number(yearCookie);
       setValue(
         "tahun",
-        yearCookie && !Number.isNaN(yNum) ? { value: yNum, label: `Tahun ${yNum}` } : null,
+        yearCookie && !Number.isNaN(yNum)
+          ? { value: yNum, label: `Tahun ${yNum}` }
+          : null,
         { shouldDirty: false, shouldValidate: true }
       );
     }
@@ -141,7 +168,8 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const { start, end } = parseRange(selectedPeriode.label);
     if (Number.isNaN(start) || Number.isNaN(end)) return [];
     const arr: OptionType[] = [];
-    for (let y = end; y >= start; y--) arr.push({ value: y, label: `Tahun ${y}` });
+    for (let y = end; y >= start; y--)
+      arr.push({ value: y, label: `Tahun ${y}` });
     return arr;
   }, [selectedPeriode]);
 
@@ -149,34 +177,47 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const onSubmit: SubmitHandler<FormValue> = async (data) => {
     // Validasi sesuai mode:
     if (!data.jenis_data) return;
-
     if (mode === "periode" && !data.periode) return;
     if (mode === "tahun" && !data.tahun) return;
 
+    // Ambil OPD dari cookie header (selectedDinas)
+    const dinasCookie = safeParseOption(getCookie("selectedDinas"));
+    if (!dinasCookie?.value) {
+      alert("Pilih Dinas/OPD di header terlebih dahulu.");
+      return;
+    }
+
+    const kode_opd = dinasCookie.value;
+    const nama_opd = dinasCookie.label ?? "";
+
     setIsSubmitting(true);
 
-    // Payload contoh:
-    // - mode 'tahun' → kirim tahun
-    // - mode 'periode' → kirim periode_start + periode_label (ubah sesuai kebutuhan backend kamu)
-    const payload =
-      mode === "tahun"
-        ? { jenis_data: data.jenis_data, tahun: data.tahun!.value }
-        : {
-            jenis_data: data.jenis_data,
-            periode_start: data.periode!.value,
-            periode_label: data.periode!.label,
-          };
+    // Payload utama
+    const payload = {
+      jenis_data: data.jenis_data,
+      kode_opd,
+      nama_opd,
+    };
 
     try {
-      const response = await fetch("https://alurkerja.zeabur.app/jenisdata", {
+      const response = await fetch("https://alurkerja.zeabur.app/jenisdataopd", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        // sesuai swagger → dibungkus { data: { ... } }
+        body: JSON.stringify({ data: payload }),
       });
 
       if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`Gagal menyimpan data: ${errText}`);
+        throw new Error(`Gagal menyimpan data: ${errText || response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.code !== 0) {
+        throw new Error(result.status || "Gagal menyimpan data");
       }
 
       alert("Data berhasil disimpan!");
@@ -207,7 +248,9 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-5 border-b">
-          <h3 className="text-xl font-bold text-center text-gray-800">TAMBAH JENIS KELOMPOK DATA</h3>
+          <h3 className="text-xl font-bold text-center text-gray-800">
+            TAMBAH JENIS KELOMPOK DATA
+          </h3>
         </div>
 
         <div className="p-8">
@@ -225,7 +268,10 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
             <div className="grid grid-cols-1 gap-6">
               {/* Jenis Data */}
               <div>
-                <label htmlFor="jenis_data" className="block text-sm font-bold text-gray-700 mb-2">
+                <label
+                  htmlFor="jenis_data"
+                  className="block text-sm font-bold text-gray-700 mb-2"
+                >
                   JENIS KELOMPOK DATA
                 </label>
                 <Controller
@@ -246,13 +292,20 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
                     />
                   )}
                 />
-                {errors.jenis_data && <p className="text-red-500 text-sm mt-1">{errors.jenis_data.message}</p>}
+                {errors.jenis_data && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.jenis_data.message}
+                  </p>
+                )}
               </div>
 
               {/* === PERIODE/TAHUN (SATU FIELD SAJA SESUAI MODE) === */}
               {mode === "periode" ? (
                 <div>
-                  <label htmlFor="periode" className="block text-sm font-bold text-gray-700 mb-2">
+                  <label
+                    htmlFor="periode"
+                    className="block text-sm font-bold text-gray-700 mb-2"
+                  >
                     PERIODE/TAHUN
                   </label>
                   <Controller
@@ -269,11 +322,18 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
                       />
                     )}
                   />
-                  {errors.periode && <p className="text-red-500 text-sm mt-1">{errors.periode.message}</p>}
+                  {errors.periode && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.periode.message}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div>
-                  <label htmlFor="tahun" className="block text-sm font-bold text-gray-700 mb-2">
+                  <label
+                    htmlFor="tahun"
+                    className="block text-sm font-bold text-gray-700 mb-2"
+                  >
                     PERIODE/TAHUN
                   </label>
                   <Controller
@@ -291,7 +351,11 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
                       />
                     )}
                   />
-                  {errors.tahun && <p className="text-red-500 text-sm mt-1">{errors.tahun.message}</p>}
+                  {errors.tahun && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.tahun.message}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

@@ -18,7 +18,7 @@ interface OptionType {
   label: string;
 }
 
-const API_BASE = "https://testapi.kertaskerja.cc/api/v1";
+const API_BASE = "https://testapi.kertaskerja.cc/";
 
 // helper parse cookie react-select
 const safeParseOption = (v: string | null | undefined): OptionType | null => {
@@ -55,7 +55,7 @@ export default function ClientPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/alur-kerja/jenisdataopd/list/${kodeOpd}`, {
+      const res = await fetch(`https://alurkerja.zeabur.app/datakinerjaopd/list/${kodeOpd}`, {
         method: "GET",
         headers: {
           Accept: "application/json",

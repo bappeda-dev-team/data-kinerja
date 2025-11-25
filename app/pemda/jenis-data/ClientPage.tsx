@@ -14,7 +14,7 @@ interface JenisData {
 }
 
 // TODO: harcoded, ambil dari env
-const API_BASE = "https://testapi.kertaskerja.cc/api/v1";
+const API_BASE = "https://alurkerja.zeabur.app";
 
 export default function ClientPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,7 +38,7 @@ export default function ClientPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/alur-kerja/jenisdata`, {
+      const res = await fetch(`${API_BASE}/datakinerjapemda/list/`, {
         method: "GET",
         headers: {
           Accept: "application/json",

@@ -24,11 +24,14 @@ const API_OPD =
   process.env.NEXT_PUBLIC_OPD_API ??
   "https://periode-service-test.zeabur.app/list_opd";
 
-const safeParseOption = (v: string | null | undefined): OptionTypeString | null => {
+const safeParseOption = (
+  v: string | null | undefined
+): OptionTypeString | null => {
   if (!v) return null;
   try {
     const o = JSON.parse(v);
-    if (o && typeof o.value === "string" && typeof o.label === "string") return o;
+    if (o && typeof o.value === "string" && typeof o.label === "string")
+      return o;
   } catch {}
   return null;
 };
@@ -50,9 +53,13 @@ const PageHeader = () => {
   const [loadingPeriode, setLoadingPeriode] = useState(false);
   const [periodeError, setPeriodeError] = useState<string | null>(null);
 
-  const [selectedDinas, setSelectedDinas] = useState<OptionTypeString | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<OptionTypeString | null>(null);
-  const [selectedPeriode, setSelectedPeriode] = useState<OptionTypeString | null>(null);
+  const [selectedDinas, setSelectedDinas] = useState<OptionTypeString | null>(
+    null
+  );
+  const [selectedCategory, setSelectedCategory] =
+    useState<OptionTypeString | null>(null);
+  const [selectedPeriode, setSelectedPeriode] =
+    useState<OptionTypeString | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>("");
 
   useEffect(() => {
@@ -77,10 +84,12 @@ const PageHeader = () => {
         const res = await fetch(API_OPD, { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        const options: OptionTypeString[] = (json?.data ?? []).map((item: any) => ({
-          value: String(item.id_opd),
-          label: String(item.nama_opd),
-        }));
+        const options: OptionTypeString[] = (json?.data ?? []).map(
+          (item: any) => ({
+            value: String(item.kode_opd),
+            label: String(item.nama_opd),
+          })
+        );
         setDinasOptions(options);
       } catch (e: any) {
         setDinasError(e?.message || "Gagal memuat OPD");
@@ -97,10 +106,12 @@ const PageHeader = () => {
         const res = await fetch(API_PERIODE, { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        const options: OptionTypeString[] = (json?.data ?? []).map((it: any) => ({
-          value: String(it.id),
-          label: `${it.tahun_awal}-${it.tahun_akhir}`,
-        }));
+        const options: OptionTypeString[] = (json?.data ?? []).map(
+          (it: any) => ({
+            value: String(it.id),
+            label: `${it.tahun_awal}-${it.tahun_akhir}`,
+          })
+        );
         options.sort((a, b) => {
           const sa = Number(a.label.split("-")[0]);
           const sb = Number(b.label.split("-")[0]);
@@ -127,13 +138,15 @@ const PageHeader = () => {
 
   useEffect(() => {
     if (!isClient) return;
-    if (selectedCategory) setCookie("selectedCategory", JSON.stringify(selectedCategory));
+    if (selectedCategory)
+      setCookie("selectedCategory", JSON.stringify(selectedCategory));
     else Cookies.remove("selectedCategory");
   }, [isClient, selectedCategory]);
 
   useEffect(() => {
     if (!isClient) return;
-    if (selectedPeriode) setCookie("selectedPeriode", JSON.stringify(selectedPeriode));
+    if (selectedPeriode)
+      setCookie("selectedPeriode", JSON.stringify(selectedPeriode));
     else Cookies.remove("selectedPeriode");
   }, [isClient, selectedPeriode]);
 
@@ -175,27 +188,54 @@ const PageHeader = () => {
 
   const handleActivate = () => {
     if (!selectedDinas) {
-      AlertNotification("Gagal", "Harap pilih Dinas/OPD terlebih dahulu", "error");
+      AlertNotification(
+        "Gagal",
+        "Harap pilih Dinas/OPD terlebih dahulu",
+        "error",
+        2000,
+        true
+      );
       return;
     }
     if (!selectedCategory) {
-      AlertNotification("Gagal", "Harap pilih Kategori (Periode/Tahunan)", "error");
+      AlertNotification(
+        "Gagal",
+        "Harap pilih Kategori (Periode/Tahunan)",
+        "error",
+        2000,
+        true
+      );
       return;
     }
     const cat = selectedCategory.value as CategoryValue;
     if (cat === "periode" && !selectedPeriode) {
-      AlertNotification("Gagal", "Harap pilih Periode 5 tahunan", "error");
+      AlertNotification(
+        "Gagal",
+        "Harap pilih Periode 5 tahunan",
+        "error",
+        2000,
+        true
+      );
       return;
     }
     if (cat === "tahun" && !selectedYear) {
-      AlertNotification("Gagal", "Harap pilih Tahun", "error");
+      AlertNotification(
+        "Gagal",
+        "Harap pilih Tahun",
+        "error",
+        2000,
+        true
+      );
       return;
     }
     AlertNotification(
       "Berhasil",
-      cat === "periode" ? "Filter Periode diaktifkan" : "Filter Tahun diaktifkan",
+      cat === "periode"
+        ? "Filter Periode diaktifkan"
+        : "Filter Tahun diaktifkan",
       "success",
-      1200
+      1200,
+      false
     );
     setTimeout(() => window.location.reload(), 1200);
   };
@@ -207,7 +247,9 @@ const PageHeader = () => {
     <div className="bg-filter-bar-bg p-3 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-3 text-white w-full md:w-auto">
         <h2 className="text-lg font-semibold">
-          {isClient ? (selectedDinas?.label ?? "Pilih Dinas/OPD") : "Pilih Dinas/OPD"}
+          {isClient
+            ? selectedDinas?.label ?? "Pilih Dinas/OPD"
+            : "Pilih Dinas/OPD"}
         </h2>
       </div>
 
@@ -224,7 +266,9 @@ const PageHeader = () => {
               options={dinasOptions}
               onChange={(opt) => setSelectedDinas(opt ?? null)}
               isLoading={loadingDinas}
-              placeholder={loadingDinas ? "Memuat..." : dinasError || "Pilih Dinas/OPD"}
+              placeholder={
+                loadingDinas ? "Memuat..." : dinasError || "Pilih Dinas/OPD"
+              }
               isSearchable
               isClearable
             />
@@ -254,7 +298,9 @@ const PageHeader = () => {
                 options={periodeOptions}
                 onChange={(opt) => setSelectedPeriode(opt ?? null)}
                 isLoading={loadingPeriode}
-                placeholder={loadingPeriode ? "Memuat..." : periodeError || "Pilih Periode"}
+                placeholder={
+                  loadingPeriode ? "Memuat..." : periodeError || "Pilih Periode"
+                }
                 isSearchable
                 isClearable
               />
@@ -266,7 +312,11 @@ const PageHeader = () => {
                 name="tahun"
                 className="text-sm w-full sm:w-44"
                 classNamePrefix="rs"
-                value={selectedYear ? { value: selectedYear, label: `Tahun ${selectedYear}` } : null}
+                value={
+                  selectedYear
+                    ? { value: selectedYear, label: `Tahun ${selectedYear}` }
+                    : null
+                }
                 options={allYearOptions}
                 onChange={(opt) => setSelectedYear(opt?.value ?? "")}
                 placeholder="Pilih Tahun"
