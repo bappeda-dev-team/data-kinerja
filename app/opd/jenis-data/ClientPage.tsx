@@ -7,6 +7,7 @@ import JenisDataTable from "./_components/JenisDataTable";
 import AddDataModal from "./_components/AddDataModal";
 import { FiHome } from "react-icons/fi";
 import { getSessionId, getCookie } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 interface JenisData {
   id: number;
@@ -38,6 +39,7 @@ export default function ClientPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { branding } = useBrandingContext();
   // Ambil token & kode_opd sekali saat mount
   useEffect(() => {
     try {
@@ -55,7 +57,7 @@ export default function ClientPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`https://alurkerja.zeabur.app/datakinerjaopd/list/${kodeOpd}`, {
+      const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/list/${kodeOpd}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -140,6 +142,7 @@ export default function ClientPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchData}
+        authToken={authToken}
       />
     </div>
   );

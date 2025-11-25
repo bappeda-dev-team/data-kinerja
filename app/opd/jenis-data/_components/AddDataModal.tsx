@@ -4,11 +4,13 @@ import React, { useMemo, useEffect, useState } from "react";
 import { useForm, Controller, SubmitHandler, useWatch } from "react-hook-form";
 import Select from "react-select";
 import { getCookie } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  authToken: string | null;
 };
 
 interface OptionType {
@@ -26,7 +28,7 @@ interface FormValue {
 
 // util: parse cookie Select(JSON)
 const safeParseOption = (
-  v: string | null | undefined
+  v: string | null | undefined,
 ): { value?: string; label?: string } | null => {
   if (!v) return null;
   try {
@@ -46,7 +48,12 @@ const parseRange = (label: string) => {
   };
 };
 
-const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const AddDataModal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  authToken,
+}) => {
   const {
     handleSubmit,
     control,
@@ -57,6 +64,7 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
     defaultValues: { jenis_data: "", periode: null, tahun: null },
   });
 
+  const { branding } = useBrandingContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -100,8 +108,8 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
       catCookie?.value === "tahun" || catCookie?.value === "periode"
         ? (catCookie.value as CategoryValue)
         : yearCookie
-        ? "tahun"
-        : "periode";
+          ? "tahun"
+          : "periode";
 
     setMode(catVal);
 
@@ -128,7 +136,7 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
         setValue(
           "tahun",
           { value: yNum, label: `Tahun ${yNum}` },
-          { shouldDirty: false, shouldValidate: true }
+          { shouldDirty: false, shouldValidate: true },
         );
       } else {
         setValue("tahun", null, {
@@ -149,7 +157,7 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
         yearCookie && !Number.isNaN(yNum)
           ? { value: yNum, label: `Tahun ${yNum}` }
           : null,
-        { shouldDirty: false, shouldValidate: true }
+        { shouldDirty: false, shouldValidate: true },
       );
     }
 
@@ -200,15 +208,17 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
     };
 
     try {
-      const response = await fetch("https://alurkerja.zeabur.app/jenisdataopd", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+      const response = await fetch(
+        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdataopd`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken ? { "X-Session-Id": authToken } : {}),
+          },
+          body: JSON.stringify(payload),
         },
-        // sesuai swagger → dibungkus { data: { ... } }
-        body: JSON.stringify({ data: payload }),
-      });
+      );
 
       if (!response.ok) {
         const errText = await response.text();
@@ -216,7 +226,7 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
       }
 
       const result = await response.json();
-      if (result.code !== 0) {
+      if (result.code !== 201) {
         throw new Error(result.status || "Gagal menyimpan data");
       }
 

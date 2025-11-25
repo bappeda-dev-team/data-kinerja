@@ -8,6 +8,7 @@ import DataTable from "../_components/DataTable";
 import AddDataTableModal from "../_components/AddDataTableModal";
 import EditDataTableModal from "../_components/EditDataTableModal";
 import { getSessionId, getCookie } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 // === Struktur data sesuai contoh response API ===
 type JenisData = {
@@ -23,6 +24,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const [openModalEdit, setOpenModalEdit] = useState(false);
   const [dataList, setDataList] = useState<JenisData[]>([]);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const { branding } = useBrandingContext();
 
   // --- Ambil token dari cookie
   useEffect(() => {
@@ -55,7 +57,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
 
     try {
       const res = await fetch(
-        `https://alurkerja.zeabur.app/jenisdataopd/list/${kode_opd}`,
+        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdataopd/list/${kode_opd}`,
         {
           method: "GET",
           headers: {
@@ -133,6 +135,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
         onClose={() => setOpenModalAdd(false)}
         onSuccess={fetchData}
         jenisDataId={slug}
+        authToken={authToken}
       />
 
       {/* Modal Edit */}
