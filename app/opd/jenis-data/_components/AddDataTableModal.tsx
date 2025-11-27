@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   useForm,
   Control,
@@ -45,14 +45,9 @@ interface FormValue {
   rumus_perhitungan: string;
   sumber_data: string;
   instansi_produsen_data: string;
-
-  // hanya satu yang aktif sesuai mode
   periode: OptionType | null;
   tahun: OptionType | null;
-
-  // tabel dinamis
   targets: TargetRow[];
-
   keterangan: string;
 }
 
@@ -98,7 +93,6 @@ const AddDataTableModal = ({
     reset,
     setValue,
     getValues,
-    watch,
     formState: { errors },
   } = useForm<FormValue>({
     defaultValues: {
@@ -109,12 +103,11 @@ const AddDataTableModal = ({
       instansi_produsen_data: "",
       periode: null,
       tahun: null,
-      targets: [], // tabel dinamis
+      targets: [],
       keterangan: "",
     },
   });
 
-  // FieldArray untuk tabel
   const { fields, replace } = useFieldArray({
     control,
     name: "targets",
@@ -124,7 +117,6 @@ const AddDataTableModal = ({
   const [jenisDataOptions, setJenisDataOptions] = useState<OptionType[]>([]);
   const [isLoadingJenisData, setIsLoadingJenisData] = useState(false);
 
-  // Mode form (ikut header cookie): "periode" | "tahun"
   const [mode, setMode] = useState<CategoryValue>("periode");
   const { branding } = useBrandingContext();
 
@@ -132,52 +124,68 @@ const AddDataTableModal = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const selectedCategory = safeParseOption(getCookie("selectedCategory")); // {value:'periode'|'tahun'}
-    const periodeCookie = safeParseOption(getCookie("selectedPeriode")); // {value:'...', label:'YYYY-YYYY'}
+    const selectedCategory = safeParseOption(getCookie("selectedCategory"));
+    const periodeCookie = safeParseOption(getCookie("selectedPeriode"));
     const yearCookie = getCookie("selectedYear") || "";
 
-    // Tentukan mode
     const inferredMode: CategoryValue =
       selectedCategory &&
       (selectedCategory.value === "tahun" ||
         selectedCategory.value === "periode")
         ? (selectedCategory.value as CategoryValue)
         : yearCookie
-          ? "tahun"
-          : "periode";
+        ? "tahun"
+        : "periode";
+
     setMode(inferredMode);
 
-    // Prefill selector Periode/Tahun (hanya untuk dipamerkan di form; sumber utama tetap dari header)
     if (periodeCookie) setValue("periode", periodeCookie);
     else setValue("periode", null);
 
     if (yearCookie) setValue("tahun", { value: yearCookie, label: yearCookie });
     else setValue("tahun", null);
 
-    // Bangun baris tabel sesuai mode
     if (inferredMode === "periode" && periodeCookie) {
       const years = yearsFromPeriodeLabel(periodeCookie.label);
       replace(years.map((y) => ({ tahun: y, target: "", satuan: "" })));
     } else if (inferredMode === "tahun" && yearCookie) {
       replace([{ tahun: yearCookie, target: "", satuan: "" }]);
     } else {
-      replace([]); // fallback aman
+      replace([]);
     }
   }, [isOpen, replace, setValue]);
 
-  // Ambil jenis data untuk select
+  // ============== FETCH JENIS DATA ==============
   const fetchJenisData = async () => {
+    // guard: kalau base URL belum di-set, jangan fetch supaya tidak "Failed to fetch"
+    if (!branding?.api_perencanaan) {
+      console.error(
+        "branding.api_perencanaan belum di-set. Cek BrandingContext atau env NEXT_PUBLIC_PERENCANAAN_API."
+      );
+      return;
+    }
+
     setIsLoadingJenisData(true);
+
     try {
       const response = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata`,
+        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdataopd/list/`,
         {
+          method: "GET",
           headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
             ...(authToken ? { "X-Session-Id": authToken } : {}),
           },
-        },
+          cache: "no-store",
+        }
       );
-      if (!response.ok) throw new Error("Gagal mengambil daftar jenis data");
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Gagal mengambil daftar jenis data: ${text}`);
+      }
+
       const result = await response.json();
       const options = (result.data as JenisDataOption[]).map((item) => ({
         value: item.id.toString(),
@@ -185,7 +193,6 @@ const AddDataTableModal = ({
       }));
       setJenisDataOptions(options);
 
-      // preselect dari prop
       const selectedOption = options.find((opt) => opt.value === jenisDataId);
       if (selectedOption) setValue("jenis_data_id", selectedOption);
     } catch (error) {
@@ -196,11 +203,21 @@ const AddDataTableModal = ({
   };
 
   useEffect(() => {
-    if (isOpen) fetchJenisData();
+    if (isOpen) {
+      fetchJenisData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // ============== SUBMIT ==============
   const onSubmit: SubmitHandler<FormValue> = async (data) => {
+    if (!branding?.api_perencanaan) {
+      alert(
+        "Konfigurasi API belum benar (api_perencanaan kosong). Cek BrandingContext."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     const payload = {
@@ -219,7 +236,7 @@ const AddDataTableModal = ({
 
     try {
       const response = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda`,
+        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/`,
         {
           method: "POST",
           headers: {
@@ -227,23 +244,29 @@ const AddDataTableModal = ({
             ...(authToken ? { "X-Session-Id": authToken } : {}),
           },
           body: JSON.stringify(payload),
-        },
+        }
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Terjadi kesalahan pada server`);
+        let errorMessage = "Terjadi kesalahan pada server";
+        try {
+          const errorData = await response.json();
+          if (errorData?.message) errorMessage = errorData.message;
+        } catch {
+          const text = await response.text();
+          if (text) errorMessage = text;
+        }
+        throw new Error(errorMessage);
       }
 
       alert("Data Kinerja berhasil disimpan!");
       onSuccess();
       handleClose();
     } catch (error: unknown) {
+      console.error("Error saat kirim data:", error);
       if (error instanceof Error) {
-        console.error("Error saat kirim data:", error);
         alert(`Gagal menyimpan data: ${error.message}`);
       } else {
-        console.error("Error saat kirim data:", error);
         alert("Gagal menyimpan data: unknown error");
       }
     } finally {
@@ -262,6 +285,7 @@ const AddDataTableModal = ({
     <div
       className="fixed inset-0 flex justify-center items-center z-50 p-4"
       style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+      onClick={handleClose}
     >
       <div
         className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
@@ -316,7 +340,6 @@ const AddDataTableModal = ({
                 error={errors.instansi_produsen_data?.message as any}
               />
 
-              {/* Penunjuk Periode/Tahun (read-only mengikuti header) */}
               {mode === "periode" ? (
                 <SelectField
                   control={control}
@@ -370,7 +393,6 @@ const AddDataTableModal = ({
                             className="odd:bg-white even:bg-gray-50"
                           >
                             <td className="p-2 border">
-                              {/* Tahun dikunci dari header (read-only) */}
                               <input
                                 className="w-full p-2 border rounded bg-gray-100"
                                 value={row.tahun}

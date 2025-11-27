@@ -8,6 +8,7 @@ import DataTable from "../_components/DataTable";
 import AddDataTableModal from "../_components/AddDataTableModal";
 import EditDataTableModal from "../_components/EditDataTableModal";
 import { getSessionId } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 // ================= Types =================
 type Target = {
@@ -41,7 +42,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
 
   // === Token sesi ===
   const [authToken, setAuthToken] = useState<string | null>(null);
-
+  const { branding } = useBrandingContext();
   // Ambil session id sekali saat mount
   useEffect(() => {
     try {
@@ -56,7 +57,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
     if (!authToken) return; // skip jika token belum siap
     try {
       const res = await fetch(
-        `${API_BASE}/alur-kerja/datakinerjapemda/list/${slug}`,
+        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/list/${slug}`,
         {
           method: "GET",
           headers: {
@@ -128,7 +129,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
 
     try {
       const res = await fetch(
-        `${API_BASE}/alur-kerja/datakinerjapemda/${id}`,
+        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/${id}`,
         {
           method: "DELETE",
           headers: {

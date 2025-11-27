@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import AddDataTableModal from "./AddDataTableModal";
 import EditDataTableModal from "./EditDataTableModal";
 import { getCookie } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 // ===== Types =====
 type JenisData = { id: number; jenis_data: string };
@@ -59,7 +60,7 @@ const parseRange = (label: string) => {
   };
 };
 
-const API_BASE = "https://alurkerja.zeabur.app";
+;
 
 export default function JenisDataTable({
   jenisDataList,
@@ -74,7 +75,7 @@ export default function JenisDataTable({
   const [details, setDetails] = useState<Record<number, DataKinerjaItem[]>>({});
   const [loading, setLoading] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<Record<number, string | null>>({});
-
+  const { branding } = useBrandingContext();
   // modal TAMBAH
   const [openAddModal, setOpenAddModal] = useState(false);
   const [selectedJenisId, setSelectedJenisId] = useState<string | null>(null);
@@ -142,7 +143,7 @@ export default function JenisDataTable({
       setError((e) => ({ ...e, [id]: null }));
 
       try {
-        const res = await fetch(`${API_BASE}/datakinerjapemda/list/`, {
+        const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/list/`, {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -190,7 +191,7 @@ export default function JenisDataTable({
     if (!confirm("Yakin ingin menghapus data ini?")) return;
 
     try {
-      const res = await fetch(`${API_BASE}/datakinerjapemda/${rowId}`, {
+      const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/${rowId}`, {
         method: "DELETE",
       });
 

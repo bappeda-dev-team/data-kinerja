@@ -7,14 +7,14 @@ import JenisDataTable from "./_components/JenisDataTable";
 import AddDataModal from "./_components/AddDataModal";
 import { FiHome } from "react-icons/fi";
 import { getSessionId } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 interface JenisData {
   id: number;
   jenis_data: string;
 }
 
-// TODO: harcoded, ambil dari env
-const API_BASE = "https://alurkerja.zeabur.app";
+
 
 export default function ClientPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,7 +22,7 @@ export default function ClientPage() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const { branding } = useBrandingContext();
   // Ambil sessionId SETELAH mount (hindari localStorage saat prerender)
   useEffect(() => {
     try {
@@ -38,7 +38,7 @@ export default function ClientPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/datakinerjapemda/list/`, {
+      const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/list/`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -84,7 +84,7 @@ export default function ClientPage() {
     async (id: number) => {
       if (!confirm("Yakin mau hapus data ini?")) return;
       try {
-        const res = await fetch(`${API_BASE}/alur-kerja/jenisdata/${id}`, {
+        const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata/${id}`, {
           method: "DELETE",
           headers: {
             Accept: "application/json",

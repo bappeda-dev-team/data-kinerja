@@ -11,6 +11,7 @@ import {
 } from "react-hook-form";
 import Select from "react-select";
 import { getCookie } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 type ModalProps = {
   isOpen: boolean;
@@ -117,6 +118,7 @@ const AddDataTableModal = ({
     name: "targets",
   });
 
+  const { branding } = useBrandingContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jenisDataOptions, setJenisDataOptions] = useState<OptionType[]>([]);
   const [isLoadingJenisData, setIsLoadingJenisData] = useState(false);
@@ -168,7 +170,7 @@ const AddDataTableModal = ({
   const fetchJenisData = async () => {
     setIsLoadingJenisData(true);
     try {
-      const response = await fetch("https://alurkerja.zeabur.app/jenisdata");
+      const response = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata`);
       if (!response.ok) throw new Error("Gagal mengambil daftar jenis data");
       const result = await response.json();
       const options = (result.data as JenisDataOption[]).map((item) => ({
@@ -213,7 +215,7 @@ const AddDataTableModal = ({
 
     try {
       const response = await fetch(
-        "https://alurkerja.zeabur.app/datakinerjapemda",
+        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -4,6 +4,7 @@ import React, { useMemo, useEffect, useState } from "react";
 import { useForm, Controller, SubmitHandler, useWatch } from "react-hook-form";
 import Select from "react-select";
 import { getCookie } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 type ModalProps = {
   isOpen: boolean;
@@ -54,6 +55,7 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
     defaultValues: { jenis_data: "", periode: null, tahun: null },
   });
 
+  const { branding } = useBrandingContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -168,7 +170,7 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
           };
 
     try {
-      const response = await fetch("https://alurkerja.zeabur.app/jenisdata", {
+      const response = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
