@@ -157,24 +157,13 @@ const AddDataTableModal = ({
 
   // ============== FETCH JENIS DATA ==============
   const fetchJenisData = async () => {
-    // guard: kalau base URL belum di-set, jangan fetch supaya tidak "Failed to fetch"
-    if (!branding?.api_perencanaan) {
-      console.error(
-        "branding.api_perencanaan belum di-set. Cek BrandingContext atau env NEXT_PUBLIC_PERENCANAAN_API."
-      );
-      return;
-    }
-
     setIsLoadingJenisData(true);
 
     try {
       const response = await fetch(
         `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdataopd/list/`,
         {
-          method: "GET",
           headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
             ...(authToken ? { "X-Session-Id": authToken } : {}),
           },
           cache: "no-store",

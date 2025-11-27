@@ -6,7 +6,6 @@ import { ChevronDown } from "lucide-react";
 import AddDataTableModal from "./AddDataTableModal";
 import EditDataTableModal from "./EditDataTableModal";
 import { getCookie } from "@/app/components/lib/Cookie";
-import { useBrandingContext } from "@/app/context/BrandingContext";
 
 // ===== Types =====
 type JenisData = { id: number; jenis_data: string };
@@ -41,7 +40,7 @@ type JenisDataTableProps = {
 
 // ===== Helpers =====
 const safeParseOption = (
-  v: string | null | undefined
+  v: string | null | undefined,
 ): { value: string; label: string } | null => {
   if (!v) return null;
   try {
@@ -60,6 +59,8 @@ const parseRange = (label: string) => {
   };
 };
 
+const API_BASE = "https://alurkerja.zeabur.app";
+
 export default function JenisDataTable({
   jenisDataList,
   onDelete,
@@ -67,6 +68,8 @@ export default function JenisDataTable({
   const pathname = usePathname();
   const isPemdaRoute = pathname?.startsWith("/pemda");
 
+  const { branding } = useBrandingContext();
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
 
   // cache detail per jenis_data_id
@@ -85,8 +88,9 @@ export default function JenisDataTable({
   const [openEditModal, setOpenEditModal] = useState(false);
   const [selectedEditItem, setSelectedEditItem] =
     useState<DataKinerjaItem | null>(null);
-  const [selectedJenisIdForEdit, setSelectedJenisIdForEdit] =
-    useState<number | null>(null);
+  const [selectedJenisIdForEdit, setSelectedJenisIdForEdit] = useState<
+    number | null
+  >(null);
 
   // modal KETERANGAN/NARASI
   const [openKetModal, setOpenKetModal] = useState(false);
@@ -99,6 +103,11 @@ export default function JenisDataTable({
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
 
   useEffect(() => {
+    try {
+      setAuthToken(getSessionId());
+    } catch {
+      setAuthToken(null);
+    }
     const cat = safeParseOption(getCookie("selectedCategory"));
     const periode = safeParseOption(getCookie("selectedPeriode"));
     const year = getCookie("selectedYear") || "";
@@ -107,8 +116,8 @@ export default function JenisDataTable({
       cat && (cat.value === "periode" || cat.value === "tahun")
         ? (cat.value as "periode" | "tahun")
         : year
-        ? "tahun"
-        : "periode";
+          ? "tahun"
+          : "periode";
 
     setMode(m);
     setPeriodeLabel(periode?.label ?? null);
@@ -138,26 +147,26 @@ export default function JenisDataTable({
 
   const loadDetail = useCallback(
     async (id: number, forceReload = false) => {
+      if (!authToken) return;
       if (!forceReload && details[id]) return;
 
       setLoading((l) => ({ ...l, [id]: true }));
       setError((e) => ({ ...e, [id]: null }));
 
       try {
-        const res = await fetch(
-          `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/list/`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-            },
-            cache: "no-store",
-          }
-        );
+        // 🔁 Ganti endpoint ke OPD list
+        const res = await fetch(`${API_BASE}/datakinerjaopd/list/`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
 
         const raw = await res.text();
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
+        if (!res.ok)
+          throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
 
         const json = JSON.parse(raw) as {
           code?: number;
@@ -179,7 +188,7 @@ export default function JenisDataTable({
         setLoading((l) => ({ ...l, [id]: false }));
       }
     },
-    [details, branding.api_perencanaan]
+    [details]
   );
 
   const toggleOpen = async (id: number) => {
@@ -234,10 +243,7 @@ export default function JenisDataTable({
                     const hasValue =
                       val !== null &&
                       val !== undefined &&
-                      !(
-                        typeof val === "string" &&
-                        val.trim() === ""
-                      );
+                      !(typeof val === "string" && val.trim() === "");
                     return inRange && hasValue;
                   });
                 });
@@ -289,8 +295,180 @@ export default function JenisDataTable({
                     </button>
                   </div>
 
-                  {/* ... tabelnya tetap sama ... */}
-                  {/* (nggak aku potong biar kamu bisa tetap pakai yang lama) */}
+                  {loading[item.id] ? (
+                    <p className="text-sm text-gray-500">Memuat…</p>
+                  ) : error[item.id] ? (
+                    <p className="text-sm text-red-600">{error[item.id]}</p>
+                  ) : visibleRows.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      Tidak ada data kinerja untuk tahun/periode yang dipilih.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left border-collapse">
+                        <thead className="bg-[#10B981] text-white uppercase">
+                          <tr>
+                            <th
+                              rowSpan={2}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              No
+                            </th>
+                            <th
+                              rowSpan={2}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              Nama Data
+                            </th>
+                            <th
+                              rowSpan={2}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              Definisi Operasional
+                            </th>
+                            <th
+                              rowSpan={2}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              Sumber Data
+                            </th>
+                            <th
+                              rowSpan={2}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              Instansi Produsen Data
+                            </th>
+                            <th
+                              colSpan={years.length}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              Jumlah
+                            </th>
+                            <th
+                              rowSpan={2}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              Satuan
+                            </th>
+                            <th
+                              rowSpan={2}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              Keterangan/Narasi
+                            </th>
+                            <th
+                              rowSpan={2}
+                              className="p-2 border border-gray-300 text-center"
+                            >
+                              Aksi
+                            </th>
+                          </tr>
+                          <tr>
+                            {years.map((y) => (
+                              <th
+                                key={y}
+                                className="p-2 border border-gray-300 text-center"
+                              >
+                                {y}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {visibleRows.map((row, index) => {
+                            const tahunMap: Record<string, string> = {};
+                            row.target?.forEach((t) => {
+                              if (t?.tahun)
+                                tahunMap[String(t.tahun)] = String(t.target);
+                            });
+
+                            const firstDisplayedYear = years[0];
+                            const satuanByYear =
+                              row.target?.find(
+                                (t) => String(t.tahun) === firstDisplayedYear
+                              )?.satuan ??
+                              row.target?.[0]?.satuan ??
+                              "-";
+
+                            return (
+                              <tr
+                                key={row.id}
+                                className="bg-white hover:bg-gray-50"
+                              >
+                                <td className="p-2 border border-gray-300 text-center">
+                                  {index + 1}
+                                </td>
+                                <td className="p-2 border border-gray-300">
+                                  {row.nama_data}
+                                </td>
+                                <td className="p-2 border border-gray-300">
+                                  {row.rumus_perhitungan}
+                                </td>
+                                <td className="p-2 border border-gray-300">
+                                  {row.sumber_data}
+                                </td>
+                                <td className="p-2 border border-gray-300">
+                                  {row.instansi_produsen_data}
+                                </td>
+
+                                {years.map((y) => (
+                                  <td
+                                    key={y}
+                                    className="p-2 border border-gray-300 text-center"
+                                  >
+                                    {tahunMap[y] ?? "-"}
+                                  </td>
+                                ))}
+
+                                <td className="p-2 border border-gray-300 text-center">
+                                  {satuanByYear}
+                                </td>
+                                <td className="p-2 border border-gray-300 text-center">
+                                  <button
+                                    onClick={() => {
+                                      setKetContent(row.keterangan || "");
+                                      setOpenKetModal(true);
+                                    }}
+                                    className="px-3 py-1 text-white rounded bg-gradient-to-r from-purple-500 to-indigo-500 hover:opacity-90 transition text-xs"
+                                  >
+                                    Tampilkan
+                                  </button>
+                                </td>
+                                <td className="p-2 border border-gray-300 text-center">
+                                  <div className="flex flex-col items-center gap-2">
+                                    <button
+                                      onClick={() => {
+                                        const prepared: DataKinerjaItem = {
+                                          ...row,
+                                          jenis_data_id:
+                                            row.jenis_data_id ?? item.id,
+                                        };
+                                        setSelectedEditItem(prepared);
+                                        setSelectedJenisIdForEdit(item.id);
+                                        setOpenEditModal(true);
+                                      }}
+                                      className="px-3 py-1 text-white rounded bg-gradient-to-r from-green-500 to-emerald-600 hover:opacity-90 transition w-full max-w-[100px] text-xs"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteKinerja(row.id, item.id)
+                                      }
+                                      className="px-3 py-1 text-white rounded bg-gradient-to-r from-red-500 to-red-700 hover:opacity-90 transition w-full max-w-[100px] text-xs"
+                                    >
+                                      Hapus
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
                   {/* Aksi di bawah detail jenis data */}
                   {/* ... */}
@@ -306,22 +484,19 @@ export default function JenisDataTable({
       )}
 
       {/* Modal TAMBAH DATA KINERJA */}
-{openAddModal && selectedJenisId && (
-  <AddDataTableModal
-    isOpen={openAddModal}
-    onClose={() => setOpenAddModal(false)}
-    onSuccess={async () => {
-      if (selectedJenisId) {
-        await loadDetail(Number(selectedJenisId), true);
-      }
-      setOpenAddModal(false);
-    }}
-    jenisDataId={selectedJenisId}
-    authToken={authToken}
-  />
-)}
-
-
+      {openAddModal && selectedJenisId && (
+        <AddDataTableModal
+          isOpen={openAddModal}
+          onClose={() => setOpenAddModal(false)}
+          onSuccess={async () => {
+            if (selectedJenisId) {
+              await loadDetail(Number(selectedJenisId), true);
+            }
+            setOpenAddModal(false);
+          }}
+          jenisDataId={selectedJenisId}
+        />
+      )}
 
       {/* Modal EDIT DATA KINERJA */}
       {openEditModal && selectedEditItem && (
