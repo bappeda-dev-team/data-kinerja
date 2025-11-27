@@ -167,13 +167,17 @@ const AddDataTableModal = ({
 
   // Ambil jenis data untuk select
   const fetchJenisData = async () => {
+    // auth token tidak ada langsung reject
+    if (!authToken) return;
     setIsLoadingJenisData(true);
     try {
       const response = await fetch(
         `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata`,
         {
+          // broken disini,
+          // X-Session-Id bukan optional
           headers: {
-            ...(authToken ? { "X-Session-Id": authToken } : {}),
+            "X-Session-Id": authToken,
           },
         },
       );
