@@ -510,6 +510,7 @@ export default function JenisDataTable({
             setOpenAddModal(false);
           }}
           jenisDataId={selectedJenisId}
+          authToken={authToken}
         />
       )}
 
