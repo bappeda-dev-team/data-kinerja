@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import AddDataTableModal from "./AddDataTableModal";
 import EditDataTableModal from "./EditDataTableModal";
-import { getCookie } from "@/app/components/lib/Cookie";
+import { getSessionId, getCookie } from "@/app/components/lib/Cookie";
+import { useBrandingContext } from "@/app/context/BrandingContext";
 
 // ===== Types =====
 type JenisData = { id: number; jenis_data: string };
@@ -35,7 +36,8 @@ type ListResponseItem = {
 
 type JenisDataTableProps = {
   jenisDataList: JenisData[];
-  onDelete: (id: number) => void;
+  onDeleteAction: (id: number) => void;
+  kodeOpd: string | null;
 };
 
 // ===== Helpers =====
@@ -63,13 +65,12 @@ const API_BASE = "https://alurkerja.zeabur.app";
 
 export default function JenisDataTable({
   jenisDataList,
-  onDelete,
+  onDeleteAction,
+  kodeOpd,
 }: JenisDataTableProps) {
   const pathname = usePathname();
   const isPemdaRoute = pathname?.startsWith("/pemda");
 
-  const { branding } = useBrandingContext();
-  const [authToken, setAuthToken] = useState<string | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
 
   // cache detail per jenis_data_id
@@ -78,7 +79,7 @@ export default function JenisDataTable({
   const [error, setError] = useState<Record<number, string | null>>({});
   const { branding } = useBrandingContext();
 
-  const authToken = getCookie("authToken") || "";
+  //const authToken = getCookie("authToken") || "";
 
   // modal TAMBAH
   const [openAddModal, setOpenAddModal] = useState(false);
@@ -101,6 +102,7 @@ export default function JenisDataTable({
   const [mode, setMode] = useState<"periode" | "tahun" | null>(null);
   const [periodeLabel, setPeriodeLabel] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -188,7 +190,7 @@ export default function JenisDataTable({
         setLoading((l) => ({ ...l, [id]: false }));
       }
     },
-    [details]
+    [details],
   );
 
   const toggleOpen = async (id: number) => {
@@ -208,7 +210,7 @@ export default function JenisDataTable({
         `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/${rowId}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (!res.ok) throw new Error("Gagal menghapus data dari server.");
@@ -386,7 +388,7 @@ export default function JenisDataTable({
                             const firstDisplayedYear = years[0];
                             const satuanByYear =
                               row.target?.find(
-                                (t) => String(t.tahun) === firstDisplayedYear
+                                (t) => String(t.tahun) === firstDisplayedYear,
                               )?.satuan ??
                               row.target?.[0]?.satuan ??
                               "-";
@@ -495,6 +497,8 @@ export default function JenisDataTable({
             setOpenAddModal(false);
           }}
           jenisDataId={selectedJenisId}
+          authToken={authToken}
+          kodeOpd={kodeOpd}
         />
       )}
 

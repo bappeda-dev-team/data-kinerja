@@ -135,7 +135,7 @@ export default function ClientPage() {
         {error && <p className="text-red-500 mb-3">{error}</p>}
         {loading && <p className="mb-3">Memuat…</p>}
 
-        <JenisDataTable jenisDataList={jenisDataList} onDelete={handleDelete} />
+        <JenisDataTable jenisDataList={jenisDataList} onDelete={handleDelete} kodeOpd={kodeOpd} />
       </div>
 
       <AddDataModal
