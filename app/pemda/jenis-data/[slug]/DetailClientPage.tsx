@@ -43,6 +43,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
   // === Token sesi ===
   const [authToken, setAuthToken] = useState<string | null>(null);
   const { branding } = useBrandingContext();
+
   // Ambil session id sekali saat mount
   useEffect(() => {
     try {
@@ -77,7 +78,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
       console.error("Gagal fetch data kinerja:", err);
       setDataList([]);
     }
-  }, [authToken, slug]);
+  }, [authToken, slug, branding]);
 
   // Panggil fetchData setelah slug *dan* token siap
   useEffect(() => {
@@ -189,7 +190,11 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
         </h2>
 
         {/* DataTable */}
-        <DataTable dataList={dataList} onUpdate={handleEdit} onDelete={handleDelete} />
+        <DataTable
+          dataList={dataList}
+          onUpdate={handleEdit}
+          onDelete={handleDelete}
+        />
       </div>
 
       {/* Modal Tambah */}
@@ -198,6 +203,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
         onClose={() => setOpenModalAdd(false)}
         onSuccess={handleAddSuccess}
         jenisDataId={slug}
+        authToken={authToken}
       />
 
       {/* Modal Edit */}

@@ -18,6 +18,7 @@ type ModalProps = {
   onClose: () => void;
   onSuccess: () => void;
   jenisDataId: string;
+  authToken: string | null;
 };
 
 interface JenisDataOption {
@@ -89,6 +90,7 @@ const AddDataTableModal = ({
   onClose,
   onSuccess,
   jenisDataId,
+  authToken,
 }: ModalProps) => {
   const {
     handleSubmit,
@@ -118,13 +120,13 @@ const AddDataTableModal = ({
     name: "targets",
   });
 
-  const { branding } = useBrandingContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jenisDataOptions, setJenisDataOptions] = useState<OptionType[]>([]);
   const [isLoadingJenisData, setIsLoadingJenisData] = useState(false);
 
   // Mode form (ikut header cookie): "periode" | "tahun"
   const [mode, setMode] = useState<CategoryValue>("periode");
+  const { branding } = useBrandingContext();
 
   // ============== INIT DARI COOKIE HEADER ==============
   useEffect(() => {
@@ -141,24 +143,21 @@ const AddDataTableModal = ({
         selectedCategory.value === "periode")
         ? (selectedCategory.value as CategoryValue)
         : yearCookie
-        ? "tahun"
-        : "periode";
+          ? "tahun"
+          : "periode";
     setMode(inferredMode);
 
     // Prefill selector Periode/Tahun (hanya untuk dipamerkan di form; sumber utama tetap dari header)
     if (periodeCookie) setValue("periode", periodeCookie);
     else setValue("periode", null);
 
-    if (yearCookie)
-      setValue("tahun", { value: yearCookie, label: yearCookie });
+    if (yearCookie) setValue("tahun", { value: yearCookie, label: yearCookie });
     else setValue("tahun", null);
 
     // Bangun baris tabel sesuai mode
     if (inferredMode === "periode" && periodeCookie) {
       const years = yearsFromPeriodeLabel(periodeCookie.label);
-      replace(
-        years.map((y) => ({ tahun: y, target: "", satuan: "" }))
-      );
+      replace(years.map((y) => ({ tahun: y, target: "", satuan: "" })));
     } else if (inferredMode === "tahun" && yearCookie) {
       replace([{ tahun: yearCookie, target: "", satuan: "" }]);
     } else {
@@ -168,9 +167,20 @@ const AddDataTableModal = ({
 
   // Ambil jenis data untuk select
   const fetchJenisData = async () => {
+    // auth token tidak ada langsung reject
+    if (!authToken) return;
     setIsLoadingJenisData(true);
     try {
-      const response = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata`);
+      const response = await fetch(
+        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata`,
+        {
+          // broken disini,
+          // X-Session-Id bukan optional
+          headers: {
+            "X-Session-Id": authToken,
+          },
+        },
+      );
       if (!response.ok) throw new Error("Gagal mengambil daftar jenis data");
       const result = await response.json();
       const options = (result.data as JenisDataOption[]).map((item) => ({
@@ -180,9 +190,7 @@ const AddDataTableModal = ({
       setJenisDataOptions(options);
 
       // preselect dari prop
-      const selectedOption = options.find(
-        (opt) => opt.value === jenisDataId
-      );
+      const selectedOption = options.find((opt) => opt.value === jenisDataId);
       if (selectedOption) setValue("jenis_data_id", selectedOption);
     } catch (error) {
       console.error("Fetch Jenis Data Error:", error);
@@ -218,16 +226,17 @@ const AddDataTableModal = ({
         `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken ? { "X-Session-Id": authToken } : {}),
+          },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.message || `Terjadi kesalahan pada server`
-        );
+        throw new Error(errorData.message || `Terjadi kesalahan pada server`);
       }
 
       alert("Data Kinerja berhasil disimpan!");
@@ -318,7 +327,9 @@ const AddDataTableModal = ({
                   name="periode"
                   label="Periode/Tahun"
                   options={
-                    getValues("periode") ? [getValues("periode") as OptionType] : []
+                    getValues("periode")
+                      ? [getValues("periode") as OptionType]
+                      : []
                   }
                   error={errors.periode?.message as any}
                   isDisabled
@@ -353,9 +364,7 @@ const AddDataTableModal = ({
                         <tr>
                           <th className="p-2 border text-left w-28">Tahun</th>
                           <th className="p-2 border text-left">Jumlah</th>
-                          <th className="p-2 border text-left w-40">
-                            Satuan
-                          </th>
+                          <th className="p-2 border text-left w-40">Satuan</th>
                         </tr>
                       </thead>
                       <tbody>

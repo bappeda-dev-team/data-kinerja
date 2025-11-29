@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import AddDataTableModal from "./AddDataTableModal";
 import EditDataTableModal from "./EditDataTableModal";
-import { getCookie } from "@/app/components/lib/Cookie";
+import { getSessionId, getCookie } from "@/app/components/lib/Cookie";
 import { useBrandingContext } from "@/app/context/BrandingContext";
 
 // ===== Types =====
@@ -41,7 +41,7 @@ type JenisDataTableProps = {
 
 // ===== Helpers =====
 const safeParseOption = (
-  v: string | null | undefined
+  v: string | null | undefined,
 ): { value: string; label: string } | null => {
   if (!v) return null;
   try {
@@ -60,22 +60,24 @@ const parseRange = (label: string) => {
   };
 };
 
-;
+// const API_BASE = "https://alurkerja.zeabur.app";
 
 export default function JenisDataTable({
   jenisDataList,
   onDelete,
 }: JenisDataTableProps) {
   const pathname = usePathname();
-  const isPemdaRoute = pathname?.startsWith("/pemda");
+  const isPemdaRoute = pathname?.startsWith("/pemda"); // masih kepake kalau mau bedain route
 
+  const { branding } = useBrandingContext();
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
 
   // cache detail per jenis_data_id
   const [details, setDetails] = useState<Record<number, DataKinerjaItem[]>>({});
   const [loading, setLoading] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<Record<number, string | null>>({});
-  const { branding } = useBrandingContext();
+
   // modal TAMBAH
   const [openAddModal, setOpenAddModal] = useState(false);
   const [selectedJenisId, setSelectedJenisId] = useState<string | null>(null);
@@ -84,8 +86,9 @@ export default function JenisDataTable({
   const [openEditModal, setOpenEditModal] = useState(false);
   const [selectedEditItem, setSelectedEditItem] =
     useState<DataKinerjaItem | null>(null);
-  const [selectedJenisIdForEdit, setSelectedJenisIdForEdit] =
-    useState<number | null>(null);
+  const [selectedJenisIdForEdit, setSelectedJenisIdForEdit] = useState<
+    number | null
+  >(null);
 
   // modal KETERANGAN/NARASI
   const [openKetModal, setOpenKetModal] = useState(false);
@@ -98,6 +101,11 @@ export default function JenisDataTable({
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
 
   useEffect(() => {
+    try {
+      setAuthToken(getSessionId());
+    } catch {
+      setAuthToken(null);
+    }
     const cat = safeParseOption(getCookie("selectedCategory"));
     const periode = safeParseOption(getCookie("selectedPeriode"));
     const year = getCookie("selectedYear") || "";
@@ -106,8 +114,8 @@ export default function JenisDataTable({
       cat && (cat.value === "periode" || cat.value === "tahun")
         ? (cat.value as "periode" | "tahun")
         : year
-        ? "tahun"
-        : "periode";
+          ? "tahun"
+          : "periode";
 
     setMode(m);
     setPeriodeLabel(periode?.label ?? null);
@@ -137,23 +145,30 @@ export default function JenisDataTable({
 
   const loadDetail = useCallback(
     async (id: number, forceReload = false) => {
+      if (!authToken) return;
       if (!forceReload && details[id]) return;
 
       setLoading((l) => ({ ...l, [id]: true }));
       setError((e) => ({ ...e, [id]: null }));
 
       try {
-        const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/list/`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
+        // 🔁 Ganti endpoint ke Pemda list
+        const res = await fetch(
+          `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/list/`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+              "X-Session-Id": authToken,
+            },
+            cache: "no-store",
           },
-          cache: "no-store",
-        });
+        );
 
         const raw = await res.text();
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
+        if (!res.ok)
+          throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
 
         const json = JSON.parse(raw) as {
           code?: number;
@@ -175,7 +190,7 @@ export default function JenisDataTable({
         setLoading((l) => ({ ...l, [id]: false }));
       }
     },
-    [details]
+    [details],
   );
 
   const toggleOpen = async (id: number) => {
@@ -191,6 +206,7 @@ export default function JenisDataTable({
     if (!confirm("Yakin ingin menghapus data ini?")) return;
 
     try {
+      // 🔁 Ganti endpoint delete ke Pemda
       const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/${rowId}`, {
         method: "DELETE",
       });
@@ -214,29 +230,21 @@ export default function JenisDataTable({
           const isOpen = openId === item.id;
           const rows = details[item.id] ?? [];
 
-          // ===== FILTER BARIS SESUAI TAHUN DI COOKIE =====
-          // kalau tidak ada info tahun (years kosong), tampilkan semua baris
+          // FILTER baris sesuai tahun di cookie
           const visibleRows =
             years.length === 0
               ? rows
               : rows.filter((row) => {
                   if (!row.target || row.target.length === 0) return false;
 
-                  // true kalau ada minimal satu target di salah satu tahun cookie
                   return row.target.some((t) => {
                     const yearStr = String(t.tahun);
                     const inRange = years.includes(yearStr);
                     const val = t.target;
-
-                    // anggap "kosong" hanya null/undefined/"" (0 masih dianggap isi)
                     const hasValue =
                       val !== null &&
                       val !== undefined &&
-                      !(
-                        typeof val === "string" &&
-                        val.trim() === ""
-                      );
-
+                      !(typeof val === "string" && val.trim() === "");
                     return inRange && hasValue;
                   });
                 });
@@ -274,6 +282,7 @@ export default function JenisDataTable({
                 <div className="p-4 border-t bg-white">
                   <div className="flex justify-between items-center mb-4">
                     <p className="text-sm text-gray-700">
+                      
                       Data Kinerja Pemda untuk jenis:{" "}
                       <span className="font-semibold">{item.jenis_data}</span>
                     </p>
@@ -292,7 +301,7 @@ export default function JenisDataTable({
                     <p className="text-sm text-gray-500">Memuat…</p>
                   ) : error[item.id] ? (
                     <p className="text-sm text-red-600">{error[item.id]}</p>
-                  ) : visibleRows.length === 0 ? ( // pakai visibleRows
+                  ) : visibleRows.length === 0 ? (
                     <p className="text-sm text-gray-500">
                       Tidak ada data kinerja untuk tahun/periode yang dipilih.
                     </p>
@@ -379,7 +388,7 @@ export default function JenisDataTable({
                             const firstDisplayedYear = years[0];
                             const satuanByYear =
                               row.target?.find(
-                                (t) => String(t.tahun) === firstDisplayedYear
+                                (t) => String(t.tahun) === firstDisplayedYear,
                               )?.satuan ??
                               row.target?.[0]?.satuan ??
                               "-";
@@ -501,6 +510,7 @@ export default function JenisDataTable({
             setOpenAddModal(false);
           }}
           jenisDataId={selectedJenisId}
+          authToken={authToken}
         />
       )}
 
