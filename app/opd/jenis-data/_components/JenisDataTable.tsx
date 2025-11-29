@@ -36,7 +36,8 @@ type ListResponseItem = {
 
 type JenisDataTableProps = {
   jenisDataList: JenisData[];
-  onDelete: (id: number) => void;
+  onDeleteAction: (id: number) => void;
+  kodeOpd: string | null;
 };
 
 // ===== Helpers =====
@@ -64,19 +65,21 @@ const parseRange = (label: string) => {
 
 export default function JenisDataTable({
   jenisDataList,
-  onDelete,
+  onDeleteAction,
+  kodeOpd,
 }: JenisDataTableProps) {
   const pathname = usePathname();
   const isPemdaRoute = pathname?.startsWith("/pemda"); // masih kepake kalau mau bedain route
 
-  const { branding } = useBrandingContext();
-  const [authToken, setAuthToken] = useState<string | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
 
   // cache detail per jenis_data_id
   const [details, setDetails] = useState<Record<number, DataKinerjaItem[]>>({});
   const [loading, setLoading] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<Record<number, string | null>>({});
+  const { branding } = useBrandingContext();
+
+  const authToken = getCookie("authToken") || "";
 
   // modal TAMBAH
   const [openAddModal, setOpenAddModal] = useState(false);
@@ -99,6 +102,7 @@ export default function JenisDataTable({
   const [mode, setMode] = useState<"periode" | "tahun" | null>(null);
   const [periodeLabel, setPeriodeLabel] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -206,10 +210,12 @@ export default function JenisDataTable({
     if (!confirm("Yakin ingin menghapus data ini?")) return;
 
     try {
-      // 🔁 Ganti endpoint delete ke OPD
-      const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/${rowId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/${rowId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!res.ok) throw new Error("Gagal menghapus data dari server.");
 
@@ -510,7 +516,6 @@ export default function JenisDataTable({
             setOpenAddModal(false);
           }}
           jenisDataId={selectedJenisId}
-          authToken={authToken}
         />
       )}
 

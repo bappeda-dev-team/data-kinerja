@@ -24,18 +24,22 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
   const [openModalEdit, setOpenModalEdit] = useState(false);
   const [dataList, setDataList] = useState<JenisData[]>([]);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [kodeOpd, setKodeOpd] = useState<string | null>(null);
   const { branding } = useBrandingContext();
 
   // --- Ambil token dari cookie
   useEffect(() => {
     try {
       setAuthToken(getSessionId());
+      setKodeOpd(getKodeOpd());
+      console.log(getKodeOpd())
     } catch {
       setAuthToken(null);
     }
   }, []);
 
   // --- Ambil kode_opd dari cookie “selectedDinas”
+  // di set state
   const getKodeOpd = () => {
     try {
       const raw = getCookie("selectedDinas");
@@ -136,6 +140,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
         onSuccess={fetchData}
         jenisDataId={slug}
         authToken={authToken}
+        kodeOpd={kodeOpd}
       />
 
       {/* Modal Edit */}

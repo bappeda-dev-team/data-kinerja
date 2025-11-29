@@ -19,6 +19,7 @@ type ModalProps = {
   onSuccess: () => void;
   jenisDataId: string;
   authToken: string | null;
+  kodeOpd: string | null;
 };
 
 interface JenisDataOption {
@@ -91,6 +92,7 @@ const AddDataTableModal = ({
   onSuccess,
   jenisDataId,
   authToken,
+  kodeOpd,
 }: ModalProps) => {
   const {
     handleSubmit,
@@ -167,12 +169,10 @@ const AddDataTableModal = ({
 
   // Ambil jenis data untuk select
   const fetchJenisData = async () => {
-    // auth token tidak ada langsung reject
-    if (!authToken) return;
     setIsLoadingJenisData(true);
     try {
       const response = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdataopd`,
+        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdataopd/list/`,
         {
           // broken disini,
           // X-Session-Id bukan optional
@@ -273,7 +273,7 @@ const AddDataTableModal = ({
       >
         <div className="p-5 border-b">
           <h3 className="text-xl font-bold text-center text-gray-800">
-            TAMBAH DATA KINERJA
+            TAMBAH DATA KINERJA OPD {kodeOpd}
           </h3>
         </div>
 
