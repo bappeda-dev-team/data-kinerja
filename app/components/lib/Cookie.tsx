@@ -1,4 +1,3 @@
-// app/components/lib/Cookie.ts
 import { AlertNotification } from "../global/Alert";
 
 // ==========================
@@ -13,7 +12,11 @@ type CookieOptions = {
 };
 
 // NOTE: hanya dipakai di client. Jangan panggil di server.
-export const setCookie = (name: string, value: string, opts: CookieOptions = {}) => {
+export const setCookie = (
+  name: string,
+  value: string,
+  opts: CookieOptions = {},
+) => {
   if (typeof document === "undefined") return;
 
   const {
@@ -24,7 +27,9 @@ export const setCookie = (name: string, value: string, opts: CookieOptions = {})
     expires,
   } = opts;
 
-  let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=${path}; SameSite=${sameSite}`;
+  let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(
+    value,
+  )}; Path=${path}; SameSite=${sameSite}`;
   if (secure) cookie += "; Secure";
   if (typeof maxAge === "number") cookie += `; Max-Age=${maxAge}`;
   if (expires instanceof Date) cookie += `; Expires=${expires.toUTCString()}`;
@@ -52,7 +57,9 @@ export const getCookie = (name: string): string | null => {
 export const removeCookie = (name: string, path = "/") => {
   if (typeof document === "undefined") return;
   // Set expired
-  document.cookie = `${encodeURIComponent(name)}=; Path=${path}; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  document.cookie = `${encodeURIComponent(
+    name,
+  )}=; Path=${path}; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 };
 
 // ==================================
@@ -64,30 +71,33 @@ type LoginResponse =
   | { code: number; data: { token?: string; user?: unknown } }
   | { code: number; data: string };
 
-export async function login(username: string, password: string): Promise<void> {
+export async function login(
+  username: string,
+  password: string,
+): Promise<void> {
   const API_LOGIN = process.env.NEXT_PUBLIC_API_URL;
   const res = await fetch(`${API_LOGIN}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password })
-  })
+    body: JSON.stringify({ username, password }),
+  });
 
   if (!res.ok) {
-    throw new Error("Login gagal")
+    throw new Error("Login gagal");
   } else {
     const data = await res.json();
-    AlertNotification("Berhasil Login", "", "success", 2000);
-    localStorage.setItem("sessionId", data.sessionId)
-  
-    // cookie buat middleware
-    document.cookie = `sessionId=${data.sessionId}; path=/; secure; samesite=strict`
-  }
+    // ⬇️ FIX: tambah argumen ke-5 (confirm: boolean)
+    AlertNotification("Berhasil Login", "", "success", 2000, true);
+    localStorage.setItem("sessionId", data.sessionId);
 
+    // cookie buat middleware
+    document.cookie = `sessionId=${data.sessionId}; path=/; secure; samesite=strict`;
+  }
 }
 
 export const logout = () => {
   // Hapus cookies yang dipakai middleware
-  removeCookie("sessionId", "/");     // ⬅️ TAMBAHKAN INI
+  removeCookie("sessionId", "/");
   removeCookie("token", "/");
   removeCookie("user", "/");
   removeCookie("opd", "/");
@@ -96,7 +106,7 @@ export const logout = () => {
 
   // (opsional) bersih-bersih localStorage
   try {
-    localStorage.removeItem("sessionId"); // ⬅️ TAMBAHKAN INI
+    localStorage.removeItem("sessionId");
     localStorage.removeItem("token");
     localStorage.removeItem("opd");
     localStorage.removeItem("user");
@@ -108,7 +118,6 @@ export const logout = () => {
     window.location.href = "/login";
   }
 };
-
 
 // Helpers pembacaan
 export const getUser = () => {
@@ -127,9 +136,9 @@ export const getToken = () => {
 };
 
 export const getSessionId = () => {
-  const t = localStorage.getItem("sessionId")
-  return t ?? '-';
-}
+  const t = localStorage.getItem("sessionId");
+  return t ?? "-";
+};
 
 export const getOpdTahun = () => {
   const tRaw = getCookie("tahun");
@@ -138,10 +147,10 @@ export const getOpdTahun = () => {
   let opd: any = null;
   try {
     if (tRaw) tahun = JSON.parse(tRaw);
-  } catch { }
+  } catch {}
   try {
     if (oRaw) opd = JSON.parse(oRaw);
-  } catch { }
+  } catch {}
   return { tahun, opd };
 };
 
@@ -149,6 +158,6 @@ export const getPeriode = () => {
   const pRaw = getCookie("periode");
   try {
     if (pRaw) return { periode: JSON.parse(pRaw) };
-  } catch { }
+  } catch {}
   return { periode: null };
 };

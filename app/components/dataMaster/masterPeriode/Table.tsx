@@ -36,7 +36,7 @@ export default function Table() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ⬇️ Ambil sessionId SETELAH mount (hindari localStorage di server)
+  // Ambil sessionId SETELAH mount (hindari localStorage di server)
   const [authToken, setAuthToken] = useState<string | null>(null);
   useEffect(() => {
     try {
@@ -61,7 +61,10 @@ export default function Table() {
       const raw = await res.text();
 
       if (!ct.includes('application/json')) {
-        console.error('Non-JSON response', { status: res.status, raw: raw.slice(0, 200) });
+        console.error('Non-JSON response', {
+          status: res.status,
+          raw: raw.slice(0, 200),
+        });
         throw new Error('Non-JSON response');
       }
       if (!res.ok) {
@@ -82,9 +85,10 @@ export default function Table() {
           tahun_awal: d.tahun_awal,
           tahun_akhir: d.tahun_akhir,
           jenis_periode: d.jenis_periode ?? 'RPJMD',
-        }))
+        })),
       );
     } catch (e) {
+      console.error(e);
       setRows([]);
       setError('Periksa koneksi / server API');
     } finally {
@@ -116,18 +120,36 @@ export default function Table() {
       const body = await res.text();
       if (!res.ok) {
         console.error('Delete failed:', res.status, body.slice(0, 200));
-        AlertNotification('Gagal', 'Gagal menghapus data (response !ok).', 'error', 1800);
+        AlertNotification(
+          'Gagal',
+          'Gagal menghapus data (response !ok).',
+          'error',
+          1800,
+          true,
+        );
         return;
       }
-      AlertNotification('Berhasil', 'Data Periode dihapus', 'success', 1000);
+      AlertNotification(
+        'Berhasil',
+        'Data Periode dihapus',
+        'success',
+        1000,
+        true,
+      );
       fetchAll();
     } catch {
-      AlertNotification('Gagal', 'Cek koneksi internet / server API', 'error', 1800);
+      AlertNotification(
+        'Gagal',
+        'Cek koneksi internet / server API',
+        'error',
+        1800,
+        true,
+      );
     }
   };
 
   if (!authToken) {
-    // opsional: skeleton saat nunggu token dari localStorage
+    // skeleton saat nunggu token dari localStorage
     return (
       <div className="border p-5 rounded-xl shadow-xl">
         <LoadingClip className="mx-5 py-5" />
@@ -166,10 +188,18 @@ export default function Table() {
           <thead>
             <tr className="bg-gray-500 text-white">
               <th className="border-r border-b py-3 text-center">No</th>
-              <th className="border-r border-b px-6 py-3 min-w-[100px]">Tahun Awal</th>
-              <th className="border-r border-b px-6 py-3 min-w-[100px]">Tahun Akhir</th>
-              <th className="border-r border-b px-6 py-3 min-w-[120px]">Jenis Periode</th>
-              <th className="border-b px-6 py-3 min-w-[160px] text-center">Aksi</th>
+              <th className="border-r border-b px-6 py-3 min-w-[100px]">
+                Tahun Awal
+              </th>
+              <th className="border-r border-b px-6 py-3 min-w-[100px]">
+                Tahun Akhir
+              </th>
+              <th className="border-r border-b px-6 py-3 min-w-[120px]">
+                Jenis Periode
+              </th>
+              <th className="border-b px-6 py-3 min-w-[160px] text-center">
+                Aksi
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -182,10 +212,18 @@ export default function Table() {
             ) : (
               rows.map((item, idx) => (
                 <tr key={item.id}>
-                  <td className="border-r border-b px-6 py-4 text-center">{idx + 1}</td>
-                  <td className="border-r border-b px-6 py-4 text-center">{item.tahun_awal}</td>
-                  <td className="border-r border-b px-6 py-4 text-center">{item.tahun_akhir}</td>
-                  <td className="border-r border-b px-6 py-4 text-center">{item.jenis_periode}</td>
+                  <td className="border-r border-b px-6 py-4 text-center">
+                    {idx + 1}
+                  </td>
+                  <td className="border-r border-b px-6 py-4 text-center">
+                    {item.tahun_awal}
+                  </td>
+                  <td className="border-r border-b px-6 py-4 text-center">
+                    {item.tahun_akhir}
+                  </td>
+                  <td className="border-r border-b px-6 py-4 text-center">
+                    {item.jenis_periode}
+                  </td>
                   <td className="border-b px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
                       <button

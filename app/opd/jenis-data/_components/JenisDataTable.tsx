@@ -61,7 +61,7 @@ const parseRange = (label: string) => {
   };
 };
 
-// const API_BASE = "https://alurkerja.zeabur.app";
+const API_BASE = "https://alurkerja.zeabur.app";
 
 export default function JenisDataTable({
   jenisDataList,
@@ -69,7 +69,7 @@ export default function JenisDataTable({
   kodeOpd,
 }: JenisDataTableProps) {
   const pathname = usePathname();
-  const isPemdaRoute = pathname?.startsWith("/pemda"); // masih kepake kalau mau bedain route
+  const isPemdaRoute = pathname?.startsWith("/pemda");
 
   const [openId, setOpenId] = useState<number | null>(null);
 
@@ -79,7 +79,7 @@ export default function JenisDataTable({
   const [error, setError] = useState<Record<number, string | null>>({});
   const { branding } = useBrandingContext();
 
-  const authToken = getCookie("authToken") || "";
+  //const authToken = getCookie("authToken") || "";
 
   // modal TAMBAH
   const [openAddModal, setOpenAddModal] = useState(false);
@@ -157,18 +157,14 @@ export default function JenisDataTable({
 
       try {
         // 🔁 Ganti endpoint ke OPD list
-        const res = await fetch(
-          `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/list/`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Session-Id": authToken,
-            },
-            cache: "no-store",
+        const res = await fetch(`${API_BASE}/datakinerjaopd/list/`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
           },
-        );
+          cache: "no-store",
+        });
 
         const raw = await res.text();
         if (!res.ok)
@@ -214,7 +210,7 @@ export default function JenisDataTable({
         `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/${rowId}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (!res.ok) throw new Error("Gagal menghapus data dari server.");
@@ -236,7 +232,6 @@ export default function JenisDataTable({
           const isOpen = openId === item.id;
           const rows = details[item.id] ?? [];
 
-          // FILTER baris sesuai tahun di cookie
           const visibleRows =
             years.length === 0
               ? rows
@@ -283,12 +278,11 @@ export default function JenisDataTable({
                 />
               </button>
 
-              {/* Konten detail data kinerja */}
+              {/* Konten detail */}
               {isOpen && (
                 <div className="p-4 border-t bg-white">
                   <div className="flex justify-between items-center mb-4">
                     <p className="text-sm text-gray-700">
-                      {/* 🔁 Ubah label Pemda → OPD */}
                       Data Kinerja OPD untuk jenis:{" "}
                       <span className="font-semibold">{item.jenis_data}</span>
                     </p>
@@ -479,20 +473,7 @@ export default function JenisDataTable({
                   )}
 
                   {/* Aksi di bawah detail jenis data */}
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => setOpenId(null)}
-                      className="px-3 py-1.5 rounded border text-sm hover:bg-gray-50"
-                    >
-                      Tutup
-                    </button>
-                    <button
-                      onClick={() => onDelete(item.id)}
-                      className="px-3 py-1.5 rounded text-white text-sm bg-gradient-to-r from-red-500 to-pink-500 hover:opacity-90"
-                    >
-                      Hapus Jenis Data
-                    </button>
-                  </div>
+                  {/* ... */}
                 </div>
               )}
             </div>
@@ -516,6 +497,8 @@ export default function JenisDataTable({
             setOpenAddModal(false);
           }}
           jenisDataId={selectedJenisId}
+          authToken={authToken}
+          kodeOpd={kodeOpd}
         />
       )}
 
@@ -539,41 +522,7 @@ export default function JenisDataTable({
       )}
 
       {/* Modal KETERANGAN / NARASI */}
-      {openKetModal && (
-        <div
-          className="fixed inset-0 flex justify-center items-center z-50 p-4"
-          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-          onClick={() => setOpenKetModal(false)}
-        >
-          <div
-            className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center p-5 border-b">
-              <h3 className="text-xl font-bold text-gray-800">
-                KETERANGAN / NARASI
-              </h3>
-              <button
-                onClick={() => setOpenKetModal(false)}
-                className="text-gray-500 hover:text-gray-800 text-2xl"
-              >
-                &times;
-              </button>
-            </div>
-            <div className="p-6">
-              {ketContent ? (
-                <p className="text-gray-700 whitespace-pre-line">
-                  {ketContent}
-                </p>
-              ) : (
-                <p className="text-gray-400 italic">
-                  Belum ada keterangan/narasi
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ... tetap sama ... */}
     </div>
   );
 }

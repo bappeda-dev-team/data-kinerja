@@ -19,8 +19,6 @@ interface OptionType {
   label: string;
 }
 
-const API_BASE = "https://testapi.kertaskerja.cc/";
-
 // helper parse cookie react-select
 const safeParseOption = (v: string | null | undefined): OptionType | null => {
   if (!v) return null;
@@ -40,6 +38,7 @@ export default function ClientPage() {
   const [error, setError] = useState<string | null>(null);
 
   const { branding } = useBrandingContext();
+
   // Ambil token & kode_opd sekali saat mount
   useEffect(() => {
     try {
@@ -57,15 +56,18 @@ export default function ClientPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/list/${kodeOpd}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-Session-Id": authToken,
-        },
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/list/${kodeOpd}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Session-Id": authToken,
+          },
+          cache: "no-store",
+        }
+      );
 
       const ct = res.headers.get("content-type") || "";
       const raw = await res.text();
@@ -89,7 +91,7 @@ export default function ClientPage() {
     } finally {
       setLoading(false);
     }
-  }, [authToken, kodeOpd]);
+  }, [authToken, kodeOpd, branding.api_perencanaan]);
 
   useEffect(() => {
     fetchData();
@@ -97,7 +99,10 @@ export default function ClientPage() {
 
   // Tidak ada endpoint DELETE di spec → nonaktifkan hapus atau ganti ke “arsipkan”
   const handleDelete = useCallback(async (_id: number) => {
-    alert("Endpoint DELETE untuk Jenis Data OPD tidak tersedia di API. Gunakan PUT (update) atau hubungi backend jika butuh hapus.");
+    alert(
+      "Endpoint DELETE untuk Jenis Data OPD tidak tersedia di API. " +
+        "Gunakan PUT (update) atau hubungi backend jika butuh hapus."
+    );
   }, []);
 
   if (authToken === null) {
@@ -114,15 +119,23 @@ export default function ClientPage() {
       <div className="bg-white p-6 rounded-b-lg shadow-md border border-gray-300 border-t-0">
         {/* Breadcrumb */}
         <div className="flex items-center mb-4">
-          <Link href="/"><FiHome size={16} /></Link>
+          <Link href="/">
+            <FiHome size={16} />
+          </Link>
           <span className="mx-2">/</span>
-          <Link href="/opd" className="hover:underline">OPD</Link>
+          <Link href="/opd" className="hover:underline">
+            OPD
+          </Link>
           <span className="mx-2">/</span>
-          <span className="font-semibold text-gray-800">Jenis Kelompok Data</span>
+          <span className="font-semibold text-gray-800">
+            Jenis Kelompok Data
+          </span>
         </div>
 
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-sidebar-bg">JENIS KELOMPOK DATA</h2>
+          <h2 className="text-xl font-bold text-sidebar-bg">
+            JENIS KELOMPOK DATA
+          </h2>
           <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-colors"
@@ -135,7 +148,12 @@ export default function ClientPage() {
         {error && <p className="text-red-500 mb-3">{error}</p>}
         {loading && <p className="mb-3">Memuat…</p>}
 
-        <JenisDataTable jenisDataList={jenisDataList} onDelete={handleDelete} kodeOpd={kodeOpd} />
+        {/* ganti dari onDelete ke onDeleteAction */}
+      <JenisDataTable
+       jenisDataList={jenisDataList}
+       onDeleteAction={handleDelete}
+        kodeOpd={kodeOpd}
+      />
       </div>
 
       <AddDataModal
