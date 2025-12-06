@@ -14,6 +14,29 @@ interface JenisData {
   jenis_data: string;
 }
 
+type Target = {
+  tahun: string;
+  satuan: string;
+  target: string | number;
+};
+
+type DataKinerjaItem = {
+  id: number;
+  jenis_data_id?: number;
+  nama_data: string;
+  rumus_perhitungan: string;
+  sumber_data: string;
+  instansi_produsen_data: string;
+  keterangan: string;
+  target: Target[];
+};
+
+type ListResponseItem = {
+  id: number;
+  jenis_data: string;
+  data_kinerja: DataKinerjaItem[];
+};
+
 interface OptionType {
   value: string; // diasumsikan = kode_opd
   label: string;
@@ -24,7 +47,8 @@ const safeParseOption = (v: string | null | undefined): OptionType | null => {
   if (!v) return null;
   try {
     const o = JSON.parse(v);
-    if (o && typeof o.value === "string" && typeof o.label === "string") return o;
+    if (o && typeof o.value === "string" && typeof o.label === "string")
+      return o;
   } catch {}
   return null;
 };
@@ -32,6 +56,9 @@ const safeParseOption = (v: string | null | undefined): OptionType | null => {
 export default function ClientPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [jenisDataList, setJenisDataList] = useState<JenisData[]>([]);
+  const [dataKinerjaMap, setDataKinerjaMap] = useState<
+    Record<number, DataKinerjaItem[]>
+  >({});
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [kodeOpd, setKodeOpd] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -66,27 +93,39 @@ export default function ClientPage() {
             "X-Session-Id": authToken,
           },
           cache: "no-store",
-        }
+        },
       );
 
       const ct = res.headers.get("content-type") || "";
       const raw = await res.text();
 
-      if (!ct.includes("application/json")) throw new Error("Non-JSON response");
-      if (!res.ok) throw new Error(`HTTP ${res.status} – ${raw.slice(0, 200)}`);
+      if (!ct.includes("application/json"))
+        throw new Error("Non-JSON response");
+      if (!res.ok)
+        throw new Error(`HTTP ${res.status} – ${raw.slice(0, 200)}`);
 
-      const json = JSON.parse(raw);
-      const mapped: JenisData[] = (json.data || []).map(
-        (item: { id: number; jenis_data?: string; nama_data?: string }) => ({
-          id: item.id,
-          jenis_data: item.jenis_data ?? item.nama_data ?? "",
-        })
-      );
+      const json = JSON.parse(raw) as { data?: ListResponseItem[] };
 
-      setJenisDataList(mapped);
+      const list: ListResponseItem[] = json.data ?? [];
+
+      // list jenis data untuk header accordion
+      const mappedJenis: JenisData[] = list.map((item) => ({
+        id: item.id,
+        jenis_data: item.jenis_data,
+      }));
+
+      // map data_kinerja per jenis_data_id
+      const map: Record<number, DataKinerjaItem[]> = {};
+      list.forEach((item) => {
+        map[item.id] = item.data_kinerja ?? [];
+      });
+
+      setJenisDataList(mappedJenis);
+      setDataKinerjaMap(map);
     } catch (err) {
       console.error("Gagal fetch:", err);
       setJenisDataList([]);
+      setDataKinerjaMap({});
       setError("Periksa koneksi / server API");
     } finally {
       setLoading(false);
@@ -97,11 +136,11 @@ export default function ClientPage() {
     fetchData();
   }, [fetchData]);
 
-  // Tidak ada endpoint DELETE di spec → nonaktifkan hapus atau ganti ke “arsipkan”
+  // Tidak ada endpoint DELETE jenis data → beri info
   const handleDelete = useCallback(async (_id: number) => {
     alert(
       "Endpoint DELETE untuk Jenis Data OPD tidak tersedia di API. " +
-        "Gunakan PUT (update) atau hubungi backend jika butuh hapus."
+        "Gunakan PUT (update) atau hubungi backend jika butuh hapus.",
     );
   }, []);
 
@@ -148,12 +187,12 @@ export default function ClientPage() {
         {error && <p className="text-red-500 mb-3">{error}</p>}
         {loading && <p className="mb-3">Memuat…</p>}
 
-        {/* ganti dari onDelete ke onDeleteAction */}
-      <JenisDataTable
-       jenisDataList={jenisDataList}
-       onDeleteAction={handleDelete}
-        kodeOpd={kodeOpd}
-      />
+        <JenisDataTable
+          jenisDataList={jenisDataList}
+          dataKinerjaMap={dataKinerjaMap}
+          onReload={fetchData}
+          kodeOpd={kodeOpd}
+        />
       </div>
 
       <AddDataModal

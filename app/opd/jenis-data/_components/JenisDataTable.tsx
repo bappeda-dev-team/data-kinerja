@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import AddDataTableModal from "./AddDataTableModal";
@@ -28,15 +28,12 @@ type DataKinerjaItem = {
   target: Target[];
 };
 
-type ListResponseItem = {
-  id: number; // id jenis data
-  jenis_data: string;
-  data_kinerja: DataKinerjaItem[];
-};
-
 type JenisDataTableProps = {
   jenisDataList: JenisData[];
-  onDeleteAction: (id: number) => void;
+  /** data_kinerja yang sudah diparsing di ClientPage, dipetakan per jenis_data_id */
+  dataKinerjaMap: Record<number, DataKinerjaItem[]>;
+  /** untuk refetch semua data dari ClientPage setelah create / edit / delete */
+  onReload: () => void;
   kodeOpd: string | null;
 };
 
@@ -61,25 +58,27 @@ const parseRange = (label: string) => {
   };
 };
 
-const API_BASE = "https://alurkerja.zeabur.app";
+// Basic Auth helper (pakai env NEXT_PUBLIC_BASIC_USER / NEXT_PUBLIC_BASIC_PASS)
+const getBasicAuthHeader = () => {
+  const user = process.env.NEXT_PUBLIC_BASIC_USER || "";
+  const pass = process.env.NEXT_PUBLIC_BASIC_PASS || "";
+  if (!user || !pass) return undefined;
+  if (typeof window === "undefined") return undefined;
+
+  const token = window.btoa(`${user}:${pass}`);
+  return `Basic ${token}`;
+};
 
 export default function JenisDataTable({
   jenisDataList,
-  onDeleteAction,
+  dataKinerjaMap,
+  onReload,
   kodeOpd,
 }: JenisDataTableProps) {
   const pathname = usePathname();
   const isPemdaRoute = pathname?.startsWith("/pemda");
 
   const [openId, setOpenId] = useState<number | null>(null);
-
-  // cache detail per jenis_data_id
-  const [details, setDetails] = useState<Record<number, DataKinerjaItem[]>>({});
-  const [loading, setLoading] = useState<Record<number, boolean>>({});
-  const [error, setError] = useState<Record<number, string | null>>({});
-  const { branding } = useBrandingContext();
-
-  //const authToken = getCookie("authToken") || "";
 
   // modal TAMBAH
   const [openAddModal, setOpenAddModal] = useState(false);
@@ -104,6 +103,8 @@ export default function JenisDataTable({
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
 
+  const { branding } = useBrandingContext();
+
   useEffect(() => {
     try {
       setAuthToken(getSessionId());
@@ -118,8 +119,8 @@ export default function JenisDataTable({
       cat && (cat.value === "periode" || cat.value === "tahun")
         ? (cat.value as "periode" | "tahun")
         : year
-          ? "tahun"
-          : "periode";
+        ? "tahun"
+        : "periode";
 
     setMode(m);
     setPeriodeLabel(periode?.label ?? null);
@@ -147,79 +148,63 @@ export default function JenisDataTable({
     return [];
   }, [checked, mode, periodeLabel, selectedYear]);
 
-  const loadDetail = useCallback(
-    async (id: number, forceReload = false) => {
-      if (!authToken) return;
-      if (!forceReload && details[id]) return;
-
-      setLoading((l) => ({ ...l, [id]: true }));
-      setError((e) => ({ ...e, [id]: null }));
-
-      try {
-        // 🔁 Ganti endpoint ke OPD list
-        const res = await fetch(`${API_BASE}/datakinerjaopd/list/`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-        });
-
-        const raw = await res.text();
-        if (!res.ok)
-          throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
-
-        const json = JSON.parse(raw) as {
-          code?: number;
-          status?: string;
-          data?: ListResponseItem[];
-        };
-
-        const all = json?.data ?? [];
-        const found = all.find((item) => item.id === id);
-        const list = found?.data_kinerja ?? [];
-
-        setDetails((d) => ({ ...d, [id]: list }));
-      } catch (err: any) {
-        setError((e) => ({
-          ...e,
-          [id]: err?.message || "Gagal memuat data",
-        }));
-      } finally {
-        setLoading((l) => ({ ...l, [id]: false }));
-      }
-    },
-    [details],
-  );
-
-  const toggleOpen = async (id: number) => {
+  const toggleOpen = (id: number) => {
     if (openId === id) {
       setOpenId(null);
       return;
     }
     setOpenId(id);
-    await loadDetail(id);
   };
 
-  const handleDeleteKinerja = async (rowId: number, jenisId: number) => {
+  // DELETE data kinerja → pakai:
+  // - URL: {branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/{id}
+  // - Header: X-Session-Id + (optional) Authorization Basic
+  const handleDeleteKinerja = async (rowId: number, _jenisId: number) => {
     if (!confirm("Yakin ingin menghapus data ini?")) return;
 
-    try {
-      const res = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/${rowId}`,
-        {
-          method: "DELETE",
-        },
-      );
+    if (!authToken) {
+      alert("Session tidak ditemukan, silakan login ulang dulu.");
+      return;
+    }
 
-      if (!res.ok) throw new Error("Gagal menghapus data dari server.");
+    const base = branding?.api_perencanaan;
+    if (!base) {
+      alert("Base URL api_perencanaan belum diset di BrandingContext.");
+      return;
+    }
+
+    try {
+      const authHeader = getBasicAuthHeader();
+
+      const headers: HeadersInit = {
+        accept: "application/json",
+        "X-Session-Id": authToken, // ⬅️ INI DIKIRIM
+      };
+      if (authHeader) {
+        headers["Authorization"] = authHeader;
+      }
+
+      const url = `${base}/api/v1/alur-kerja/datakinerjaopd/${rowId}`;
+      console.log("DELETE URL:", url, headers); // bantu cek di console
+
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers,
+      });
+
+      const raw = await res.text();
+
+      if (!res.ok) {
+        console.error("Delete failed:", res.status, raw.slice(0, 200));
+        alert(`❌ Gagal menghapus data (HTTP ${res.status})`);
+        return;
+      }
 
       alert("✅ Data berhasil dihapus!");
-      await loadDetail(jenisId, true);
+      await onReload();
     } catch (error) {
       console.error("Gagal menghapus data:", error);
-      alert("❌ Terjadi kesalahan saat menghapus data.");
+      alert("❌ Terjadi kesalahan saat menghapus data (Failed to fetch).");
     }
   };
 
@@ -230,7 +215,7 @@ export default function JenisDataTable({
       {jenisDataList?.length ? (
         jenisDataList.map((item, idx) => {
           const isOpen = openId === item.id;
-          const rows = details[item.id] ?? [];
+          const rows = dataKinerjaMap[item.id] ?? [];
 
           const visibleRows =
             years.length === 0
@@ -297,11 +282,7 @@ export default function JenisDataTable({
                     </button>
                   </div>
 
-                  {loading[item.id] ? (
-                    <p className="text-sm text-gray-500">Memuat…</p>
-                  ) : error[item.id] ? (
-                    <p className="text-sm text-red-600">{error[item.id]}</p>
-                  ) : visibleRows.length === 0 ? (
+                  {visibleRows.length === 0 ? (
                     <p className="text-sm text-gray-500">
                       Tidak ada data kinerja untuk tahun/periode yang dipilih.
                     </p>
@@ -471,9 +452,6 @@ export default function JenisDataTable({
                       </table>
                     </div>
                   )}
-
-                  {/* Aksi di bawah detail jenis data */}
-                  {/* ... */}
                 </div>
               )}
             </div>
@@ -491,9 +469,7 @@ export default function JenisDataTable({
           isOpen={openAddModal}
           onClose={() => setOpenAddModal(false)}
           onSuccess={async () => {
-            if (selectedJenisId) {
-              await loadDetail(Number(selectedJenisId), true);
-            }
+            await onReload();
             setOpenAddModal(false);
           }}
           jenisDataId={selectedJenisId}
@@ -508,9 +484,7 @@ export default function JenisDataTable({
           isOpen={openEditModal}
           onClose={() => setOpenEditModal(false)}
           onSuccess={async () => {
-            if (selectedJenisIdForEdit != null) {
-              await loadDetail(selectedJenisIdForEdit, true);
-            }
+            await onReload();
           }}
           dataItem={selectedEditItem as any}
           jenisDataId={
@@ -521,8 +495,7 @@ export default function JenisDataTable({
         />
       )}
 
-      {/* Modal KETERANGAN / NARASI */}
-      {/* ... tetap sama ... */}
+      {/* Modal KETERANGAN / NARASI → tinggal tambahkan implementasi modal-mu di sini */}
     </div>
   );
 }
