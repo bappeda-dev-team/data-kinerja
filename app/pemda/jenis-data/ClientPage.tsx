@@ -236,6 +236,7 @@ export default function ClientPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchData}
+        authToken={authToken}
       />
     </div>
   );

@@ -190,7 +190,7 @@ export default function ClientPage() {
         <JenisDataTable
           jenisDataList={jenisDataList}
           dataKinerjaMap={dataKinerjaMap}
-          onReload={fetchData}
+          onReloadAction={fetchData}
           kodeOpd={kodeOpd}
         />
       </div>

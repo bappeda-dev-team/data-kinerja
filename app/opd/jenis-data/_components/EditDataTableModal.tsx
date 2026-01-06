@@ -116,12 +116,10 @@ const EditDataTableModal: React.FC<ModalProps> = ({
       const res = await fetch(`${API_BASE}/datakinerjaopd/${dataItem.id}`, {
         method: "PUT",
         headers: {
-          Accept: "application/json",
           "Content-Type": "application/json",
-          "X-Session-Id": authToken,
+          ...(authToken ? { "X-Session-Id": authToken } : {}),
         },
         body: JSON.stringify(payload),
-        cache: "no-store",
       });
 
       const raw = await res.text();

@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrandingContext } from "@/app/context/BrandingContext";
 import React, { useState, useEffect } from "react";
 
 interface DataKinerja {
@@ -23,6 +24,7 @@ interface ModalProps {
   onSuccess: () => void | Promise<void>;
   dataItem: DataKinerja | null;
   jenisDataId?: string;
+  authToken: string | null;
 }
 
 interface FormData {
@@ -42,7 +44,7 @@ const EditDataTableModal: React.FC<ModalProps> = ({
   onClose,
   onSuccess,
   dataItem,
-  jenisDataId,
+  authToken
 }) => {
   const [formData, setFormData] = useState<FormData>({
     jenis_data_id: "",
@@ -55,6 +57,8 @@ const EditDataTableModal: React.FC<ModalProps> = ({
     tahun: new Date().getFullYear(),
     target: "",
   });
+
+  const { branding } = useBrandingContext();
 
   useEffect(() => {
     if (dataItem) {
@@ -99,10 +103,13 @@ const EditDataTableModal: React.FC<ModalProps> = ({
 
     try {
       const res = await fetch(
-        `https://alurkerja.zeabur.app/datakinerjapemda/${dataItem.id}`,
+        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/${dataItem.id}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { "X-Session-Id": authToken } : {}),
+        },
           body: JSON.stringify(payload),
         }
       );

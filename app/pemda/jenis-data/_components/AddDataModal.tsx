@@ -10,6 +10,7 @@ type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  authToken: string | null;
 };
 
 interface OptionType {
@@ -31,7 +32,7 @@ const safeParseOption = (v: string | null | undefined): { value?: string; label?
   try {
     const o = JSON.parse(v);
     if (o && typeof o.value === "string" && typeof o.label === "string") return o;
-  } catch {}
+  } catch { }
   return null;
 };
 
@@ -44,7 +45,9 @@ const parseRange = (label: string) => {
   };
 };
 
-const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const AddDataModal: React.FC<ModalProps> = ({
+  isOpen, onClose, onSuccess, authToken,
+}) => {
   const {
     handleSubmit,
     control,
@@ -157,24 +160,21 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
 
     setIsSubmitting(true);
 
-    // Payload contoh:
-    // - mode 'tahun' → kirim tahun
-    // - mode 'periode' → kirim periode_start + periode_label (ubah sesuai kebutuhan backend kamu)
-    const payload =
-      mode === "tahun"
-        ? { jenis_data: data.jenis_data, tahun: data.tahun!.value }
-        : {
-            jenis_data: data.jenis_data,
-            periode_start: data.periode!.value,
-            periode_label: data.periode!.label,
-          };
+    const payload = {
+        jenis_data: data.jenis_data,
+    };
 
     try {
       const response = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { "X-Session-Id": authToken } : {}),
+        },
         body: JSON.stringify(payload),
       });
+
+      console.log("Response Pemda:", response);
 
       if (!response.ok) {
         const errText = await response.text();
@@ -240,11 +240,10 @@ const AddDataModal: React.FC<ModalProps> = ({ isOpen, onClose, onSuccess }) => {
                       id="jenis_data"
                       type="text"
                       placeholder="Masukkan Nama Data"
-                      className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${
-                        errors.jenis_data
+                      className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition ${errors.jenis_data
                           ? "border-red-500 focus:ring-red-500"
                           : "border-gray-300 focus:ring-blue-500"
-                      }`}
+                        }`}
                     />
                   )}
                 />

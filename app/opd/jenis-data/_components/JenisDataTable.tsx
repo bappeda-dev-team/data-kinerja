@@ -35,7 +35,7 @@ type JenisDataTableProps = {
   /** data_kinerja yang sudah diparsing di ClientPage, dipetakan per jenis_data_id */
   dataKinerjaMap: Record<number, DataKinerjaItem[]>;
   /** untuk refetch semua data dari ClientPage setelah create / edit / delete */
-  onReload: () => void;
+  onReloadAction: () => void;
   kodeOpd: string | null;
 };
 
@@ -100,7 +100,7 @@ const getBasicAuthHeader = () => {
 export default function JenisDataTable({
   jenisDataList,
   dataKinerjaMap,
-  onReload,
+  onReloadAction,
   kodeOpd,
 }: JenisDataTableProps) {
   const pathname = usePathname();
@@ -229,7 +229,7 @@ export default function JenisDataTable({
       }
 
       alert("✅ Data berhasil dihapus!");
-      await onReload();
+      await onReloadAction();
     } catch (error) {
       console.error("Gagal menghapus data:", error);
       alert("❌ Terjadi kesalahan saat menghapus data (Failed to fetch).");
@@ -504,7 +504,7 @@ export default function JenisDataTable({
           isOpen={openAddModal}
           onClose={() => setOpenAddModal(false)}
           onSuccess={async () => {
-            await onReload();
+            await onReloadAction();
             setOpenAddModal(false);
           }}
           jenisDataId={selectedJenisId}
@@ -519,7 +519,7 @@ export default function JenisDataTable({
           isOpen={openEditModal}
           onClose={() => setOpenEditModal(false)}
           onSuccess={async () => {
-            await onReload();
+            await onReloadAction();
           }}
           dataItem={selectedEditItem as any}
           jenisDataId={

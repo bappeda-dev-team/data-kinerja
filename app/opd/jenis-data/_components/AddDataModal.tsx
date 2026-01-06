@@ -219,6 +219,7 @@ const AddDataModal: React.FC<ModalProps> = ({
           body: JSON.stringify(payload),
         },
       );
+      console.log("Response OPD:", response);
 
       if (!response.ok) {
         const errText = await response.text();

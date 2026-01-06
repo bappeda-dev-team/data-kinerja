@@ -214,6 +214,7 @@ export default function DetailClientPageOPD({ slug }: { slug: string }) {
           onSuccess={handleEditSuccess}
           jenisDataId={slug}
           dataItem={dataItemToEdit}
+          authToken={authToken}
         />
       )}
     </div>
