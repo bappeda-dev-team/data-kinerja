@@ -7,6 +7,8 @@ import AddDataTableModal from "./AddDataTableModal";
 import EditDataTableModal from "./EditDataTableModal";
 import { getSessionId, getCookie } from "@/app/components/lib/Cookie";
 import { useBrandingContext } from "@/app/context/BrandingContext";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ===== Types =====
 type JenisData = { id: number; jenis_data: string };
@@ -38,6 +40,32 @@ type JenisDataTableProps = {
 };
 
 // ===== Helpers =====
+const handleSavePDF = () => {
+  const doc = new jsPDF("l", "mm", "a4"); // landscape biar muat 2025–2030
+
+  doc.setFontSize(14);
+  doc.text("Data Kinerja Pemda – Jenis Kelompok Data", 14, 15);
+
+  autoTable(doc, {
+    html: "#table-jenis-data",
+    startY: 20,
+    theme: "grid",
+    headStyles: {
+      fillColor: [16, 185, 129], // hijau header (tailwind emerald-500)
+      textColor: 255,
+      halign: "center",
+    },
+    bodyStyles: {
+      halign: "center",
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
+  });
+
+  doc.save("data-kinerja-pemda.pdf");
+};
 const safeParseOption = (
   v: string | null | undefined,
 ): { value: string; label: string } | null => {
@@ -271,15 +299,19 @@ export default function JenisDataTable({
                       Data Kinerja OPD untuk jenis:{" "}
                       <span className="font-semibold">{item.jenis_data}</span>
                     </p>
-                    <button
-                      onClick={() => {
-                        setSelectedJenisId(String(item.id));
-                        setOpenAddModal(true);
-                      }}
-                      className="px-4 py-2 rounded-md text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 text-sm font-semibold"
-                    >
-                      + Tambah Data Kinerja
-                    </button>
+                    <div className="flex gap-2">
+  <button
+    onClick={handleSavePDF}
+    className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded"
+  >
+    💾 Simpan PDF
+  </button>
+
+  <button className="px-4 py-2 bg-blue-500 text-white rounded">
+    + Tambah Data Kinerja
+  </button>
+</div>
+
                   </div>
 
                   {visibleRows.length === 0 ? (
@@ -288,7 +320,9 @@ export default function JenisDataTable({
                     </p>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border-collapse">
+                      <table 
+                      id="table-jenis-data"
+                      className="w-full text-sm text-left border-collapse">
                         <thead className="bg-[#10B981] text-white uppercase">
                           <tr>
                             <th
@@ -407,7 +441,7 @@ export default function JenisDataTable({
                                 <td className="p-2 border border-gray-300 text-center">
                                   {satuanByYear}
                                 </td>
-                                <td className="p-2 border border-gray-300 text-center">
+                                  <td className="p-2 border border-gray-300 text-center align-middle">
                                   <button
                                     onClick={() => {
                                       setKetContent(row.keterangan || "");
@@ -417,6 +451,7 @@ export default function JenisDataTable({
                                   >
                                     Tampilkan
                                   </button>
+
                                 </td>
                                 <td className="p-2 border border-gray-300 text-center">
                                   <div className="flex flex-col items-center gap-2">
@@ -495,7 +530,42 @@ export default function JenisDataTable({
         />
       )}
 
-      {/* Modal KETERANGAN / NARASI → tinggal tambahkan implementasi modal-mu di sini */}
+      {/* Modal KETERANGAN / NARASI */}
+      {openKetModal && (
+        <div
+          className="fixed inset-0 flex justify-center items-center z-50 p-4"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          onClick={() => setOpenKetModal(false)}
+        >
+          <div
+            className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center p-5 border-b">
+              <h3 className="text-xl font-bold text-gray-800">
+                KETERANGAN / NARASI
+              </h3>
+              <button
+                onClick={() => setOpenKetModal(false)}
+                className="text-gray-500 hover:text-gray-800 text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6">
+              {ketContent ? (
+                <p className="text-gray-700 whitespace-pre-line">
+                  {ketContent}
+                </p>
+              ) : (
+                <p className="text-gray-400 italic">
+                  Belum ada keterangan/narasi
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

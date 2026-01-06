@@ -1,4 +1,3 @@
-// components/loading.tsx
 import React from "react";
 import { ClipLoader, BeatLoader, SyncLoader } from "react-spinners";
 

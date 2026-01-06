@@ -121,7 +121,9 @@ const DataTable = ({ dataList = [], onUpdate, onDelete }: DataTableProps) => {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm text-left border-collapse">
+      <table 
+      id="table-jenis-data"
+      className="w-full text-sm text-left border-collapse">
         <thead className="bg-[#10B981] text-white uppercase rounded-t-xl">
           <tr>
             <th rowSpan={2} className="p-2 border border-gray-300 text-center">
