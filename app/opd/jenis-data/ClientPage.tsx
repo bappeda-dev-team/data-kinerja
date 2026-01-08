@@ -84,7 +84,7 @@ export default function ClientPage() {
     setError(null);
     try {
       const res = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd/list/${kodeOpd}`,
+        `${branding.api_perencanaan}/api/v1/datakinerjaopd/list/${kodeOpd}`,
         {
           method: "GET",
           headers: {

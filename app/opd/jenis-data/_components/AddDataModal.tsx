@@ -209,7 +209,7 @@ const AddDataModal: React.FC<ModalProps> = ({
 
     try {
       const response = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdataopd`,
+        `${branding.api_perencanaan}/api/v1/jenisdataopd`,
         {
           method: "POST",
           headers: {

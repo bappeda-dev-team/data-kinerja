@@ -212,7 +212,7 @@ export default function JenisDataTable({
         headers["Authorization"] = authHeader;
       }
 
-      const url = `${base}/api/v1/alur-kerja/datakinerjaopd/${rowId}`;
+      const url = `${base}/api/v1/datakinerjaopd/${rowId}`;
       console.log("DELETE URL:", url, headers); // bantu cek di console
 
       const res = await fetch(url, {

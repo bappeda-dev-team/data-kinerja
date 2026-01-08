@@ -164,7 +164,7 @@ const AddDataTableModal = ({
 
     try {
       const response = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdataopd/list/${kodeOpd}`,
+        `${branding.api_perencanaan}/api/v1/jenisdataopd/list/${kodeOpd}`,
         {
           headers: {
             ...(authToken ? { "X-Session-Id": authToken } : {}),
@@ -235,7 +235,7 @@ const AddDataTableModal = ({
 
     try {
       const response = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjaopd`,
+        `${branding.api_perencanaan}/api/v1/datakinerjaopd`,
         {
           method: "POST",
           headers: {

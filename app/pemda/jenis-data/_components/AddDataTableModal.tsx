@@ -223,7 +223,7 @@ const AddDataTableModal = ({
 
     try {
       const response = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda`,
+        `${branding.api_perencanaan}/api/v1/datakinerjapemda`,
         {
           method: "POST",
           headers: {

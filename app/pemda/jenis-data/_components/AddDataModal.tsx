@@ -165,7 +165,7 @@ const AddDataModal: React.FC<ModalProps> = ({
     };
 
     try {
-      const response = await fetch(`${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata`, {
+      const response = await fetch(`${branding.api_perencanaan}/api/v1/jenisdata`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

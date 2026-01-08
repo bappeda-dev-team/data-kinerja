@@ -544,6 +544,7 @@ export default function JenisDataTable({
               ? String(selectedJenisIdForEdit)
               : undefined
           }
+          authToken={authToken}
         />
       )}
 

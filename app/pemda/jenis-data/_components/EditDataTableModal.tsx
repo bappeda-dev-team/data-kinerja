@@ -132,7 +132,7 @@ const EditDataTableModal = ({
 
     try {
       const res = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/${dataItem.id}`,
+        `${branding.api_perencanaan}/api/v1/datakinerjapemda/${dataItem.id}`,
         {
           method: "PUT",
           headers: {
