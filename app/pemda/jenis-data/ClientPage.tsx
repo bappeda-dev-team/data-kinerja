@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import axios, { AxiosError } from "axios"; // Import Axios
 import JenisDataTable from "./_components/JenisDataTable";
 import AddDataModal from "./_components/AddDataModal";
 import { FiHome } from "react-icons/fi";
@@ -37,6 +38,15 @@ type ListResponseItem = {
   data_kinerja: DataKinerjaItem[];
 };
 
+// Interface untuk Response Wrapper sesuai Postman
+interface ApiResponse<T> {
+  status: number;
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
+}
+
 export default function ClientPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [jenisDataList, setJenisDataList] = useState<JenisData[]>([]);
@@ -49,7 +59,7 @@ export default function ClientPage() {
 
   const { branding } = useBrandingContext();
 
-  // Ambil sessionId SETELAH mount (hindari localStorage saat prerender)
+  // Ambil sessionId SETELAH mount
   useEffect(() => {
     try {
       setAuthToken(getSessionId());
@@ -67,34 +77,24 @@ export default function ClientPage() {
 
     setLoading(true);
     setError(null);
+
     try {
-      const res = await fetch(
-        `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/list/`,
+      // Menggunakan Axios & Endpoint sesuai Postman: GET {{base_url}}/datakinerjapemda/list
+      const response = await axios.get<ApiResponse<ListResponseItem[]>>(
+        `${branding.api_perencanaan}/datakinerjapemda/list`, 
         {
-          method: "GET",
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
             "X-Session-Id": authToken,
           },
-          cache: "no-store",
         }
       );
 
-      const ct = res.headers.get("content-type") || "";
-      const raw = await res.text();
+      console.log("[Pemda JenisData] status:", response.status);
+      console.log("[Pemda JenisData] data:", response.data);
 
-      console.log("[Pemda JenisData] status:", res.status);
-      console.log("[Pemda JenisData] content-type:", ct);
-      console.log("[Pemda JenisData] body preview:", raw.slice(0, 200));
-
-      if (!ct.includes("application/json"))
-        throw new Error("Non-JSON response");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const json = JSON.parse(raw) as { data?: ListResponseItem[] };
-
-      const list: ListResponseItem[] = Array.isArray(json.data) ? json.data : [];
+      const list = Array.isArray(response.data.data) ? response.data.data : [];
 
       // List untuk header accordion
       const mappedJenis: JenisData[] = list.map((item) => ({
@@ -112,11 +112,17 @@ export default function ClientPage() {
 
       setJenisDataList(mappedJenis);
       setDataKinerjaMap(kinerjaMap);
+
     } catch (err) {
       console.error("Gagal fetch:", err);
       setJenisDataList([]);
       setDataKinerjaMap({});
-      setError("Periksa koneksi / server API");
+      
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Terjadi kesalahan pada server API");
+      } else {
+        setError("Periksa koneksi / server API");
+      }
     } finally {
       setLoading(false);
     }
@@ -139,10 +145,10 @@ export default function ClientPage() {
       if (!confirm("Yakin mau hapus jenis data ini?")) return;
 
       try {
-        const res = await fetch(
-          `${branding.api_perencanaan}/api/v1/alur-kerja/jenisdata/${id}`,
+        // Menggunakan Axios & Endpoint sesuai Postman: DELETE {{base_url}}/jenisdata/:id
+        const response = await axios.delete(
+          `${branding.api_perencanaan}/jenisdata/${id}`,
           {
-            method: "DELETE",
             headers: {
               Accept: "application/json",
               "Content-Type": "application/json",
@@ -151,17 +157,9 @@ export default function ClientPage() {
           }
         );
 
-        const raw = await res.text();
-        console.log(
-          "[Delete JenisData Pemda] status:",
-          res.status,
-          "body:",
-          raw.slice(0, 200)
-        );
+        console.log("[Delete JenisData] status:", response.status);
 
-        if (!res.ok) throw new Error("Gagal hapus data");
-
-        // Hapus dari state list & map
+        // Hapus dari state list & map jika sukses
         setJenisDataList((prev) => prev.filter((item) => item.id !== id));
         setDataKinerjaMap((prev) => {
           const copy = { ...prev };
@@ -170,9 +168,14 @@ export default function ClientPage() {
         });
 
         alert("Data berhasil dihapus!");
+
       } catch (err) {
         console.error(err);
-        alert("Terjadi kesalahan saat menghapus data");
+        if (axios.isAxiosError(err)) {
+             alert(`Gagal hapus data: ${err.response?.data?.message || err.message}`);
+        } else {
+             alert("Terjadi kesalahan saat menghapus data");
+        }
       }
     },
     [authToken, branding]

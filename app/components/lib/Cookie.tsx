@@ -5,13 +5,12 @@ import { AlertNotification } from "../global/Alert";
 // ==========================
 type CookieOptions = {
   path?: string;
-  maxAge?: number; // detik
+  maxAge?: number;
   expires?: Date;
   sameSite?: "lax" | "strict" | "none" | "Lax" | "Strict" | "None";
   secure?: boolean;
 };
 
-// NOTE: hanya dipakai di client. Jangan panggil di server.
 export const setCookie = (
   name: string,
   value: string,
@@ -37,7 +36,6 @@ export const setCookie = (
   document.cookie = cookie;
 };
 
-// SSR-safe getter
 export const getCookie = (name: string): string | null => {
   if (typeof document === "undefined") return null;
   const target = `; ${encodeURIComponent(name)}=`;
@@ -56,7 +54,6 @@ export const getCookie = (name: string): string | null => {
 
 export const removeCookie = (name: string, path = "/") => {
   if (typeof document === "undefined") return;
-  // Set expired
   document.cookie = `${encodeURIComponent(
     name,
   )}=; Path=${path}; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
@@ -66,37 +63,36 @@ export const removeCookie = (name: string, path = "/") => {
 // Auth helpers: login / logout / get
 // ==================================
 
-// Tipe respons agar aman saat akses properti
-type LoginResponse =
-  | { code: number; data: { token?: string; user?: unknown } }
-  | { code: number; data: string };
-
 export async function login(
   username: string,
   password: string,
 ): Promise<void> {
-  const API_LOGIN = process.env.NEXT_PUBLIC_API_URL;
-  const res = await fetch(`${API_LOGIN}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
+  // ! BYPASS: Simulasi delay network 1 detik biar kerasa loading
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  if (!res.ok) {
-    throw new Error("Login gagal");
-  } else {
-    const data = await res.json();
-    // ⬇️ FIX: tambah argumen ke-5 (confirm: boolean)
-    AlertNotification("Berhasil Login", "", "success", 2000, true);
-    localStorage.setItem("sessionId", data.sessionId);
+  // ! BYPASS: Hardcode data user (Admin Mode)
+  const mockSessionId = "dev-session-" + Date.now();
+  const mockUser = {
+    username: username,
+    nama: "Developer Mode",
+    role: "ADMIN", // Set role tertinggi
+    nip: username,
+  };
 
-    // cookie buat middleware
-    document.cookie = `sessionId=${data.sessionId}; path=/; secure; samesite=strict`;
-  }
+  // ! BYPASS: Set Token & Session Dummy ke Cookie & LocalStorage
+  localStorage.setItem("sessionId", mockSessionId);
+  
+  // Cookie diset manual agar middleware frontend mendeteksi user sudah login
+  document.cookie = `sessionId=${mockSessionId}; path=/; SameSite=Lax`;
+  document.cookie = `token=dummy-token-bypass; path=/; SameSite=Lax`;
+  document.cookie = `user=${JSON.stringify(mockUser)}; path=/; SameSite=Lax`;
+
+  // ! BYPASS: Notifikasi Sukses
+  AlertNotification("Login Bypass Berhasil", "Mode Development", "success", 2000, true);
 }
 
 export const logout = () => {
-  // Hapus cookies yang dipakai middleware
+  // Hapus semua cookies auth
   removeCookie("sessionId", "/");
   removeCookie("token", "/");
   removeCookie("user", "/");
@@ -104,7 +100,7 @@ export const logout = () => {
   removeCookie("periode", "/");
   removeCookie("tahun", "/");
 
-  // (opsional) bersih-bersih localStorage
+  // Bersih-bersih localStorage
   try {
     localStorage.removeItem("sessionId");
     localStorage.removeItem("token");
@@ -119,7 +115,7 @@ export const logout = () => {
   }
 };
 
-// Helpers pembacaan
+// Helpers pembacaan data user
 export const getUser = () => {
   const raw = getCookie("user");
   if (!raw) return undefined;
