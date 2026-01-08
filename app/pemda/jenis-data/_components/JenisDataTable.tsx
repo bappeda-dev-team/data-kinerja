@@ -205,7 +205,7 @@ export default function JenisDataTable({
       };
       if (authHeader) headers["Authorization"] = authHeader;
 
-      const url = `${branding.api_perencanaan}/api/v1/alur-kerja/datakinerjapemda/${rowId}`;
+      const url = `${branding.api_perencanaan}/api/v1/datakinerjapemda/${rowId}`;
       console.log("DELETE PEMDA:", url, headers);
 
       const res = await fetch(url, {
@@ -536,7 +536,7 @@ export default function JenisDataTable({
           isOpen={openEditModal}
           onClose={() => setOpenEditModal(false)}
           onSuccess={async () => {
-            await onReload(); // refetch dari ClientPage
+            onReload(); // refetch dari ClientPage
           }}
           dataItem={selectedEditItem as any}
           jenisDataId={
@@ -544,7 +544,6 @@ export default function JenisDataTable({
               ? String(selectedJenisIdForEdit)
               : undefined
           }
-          authToken={token} // Pastikan ini tidak kosong
         />
       )}
 
