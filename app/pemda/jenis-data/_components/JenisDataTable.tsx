@@ -7,6 +7,8 @@ import AddDataTableModal from "./AddDataTableModal";
 import EditDataTableModal from "./EditDataTableModal";
 import { getSessionId, getCookie } from "@/app/components/lib/Cookie";
 import { useBrandingContext } from "@/app/context/BrandingContext";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ===== Types =====
 type JenisData = { id: number; jenis_data: string };
@@ -39,6 +41,32 @@ type JenisDataTableProps = {
 };
 
 // ===== Helpers =====
+const handleSavePDF = () => {
+  const doc = new jsPDF("l", "mm", "a4"); // landscape biar muat 2025–2030
+
+  doc.setFontSize(14);
+  doc.text("Data Kinerja Pemda – Jenis Kelompok Data", 14, 15);
+
+  autoTable(doc, {
+    html: "#table-jenis-data",
+    startY: 20,
+    theme: "grid",
+    headStyles: {
+      fillColor: [16, 185, 129], // hijau header (tailwind emerald-500)
+      textColor: 255,
+      halign: "center",
+    },
+    bodyStyles: {
+      halign: "center",
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
+  });
+
+  doc.save("data-kinerja-pemda.pdf");
+};
 const safeParseOption = (
   v: string | null | undefined,
 ): { value: string; label: string } | null => {
@@ -82,7 +110,7 @@ export default function JenisDataTable({
   const { branding } = useBrandingContext();
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
-
+  const token = getCookie("token");
   // modal TAMBAH
   const [openAddModal, setOpenAddModal] = useState(false);
   const [selectedJenisId, setSelectedJenisId] = useState<string | null>(null);
@@ -262,20 +290,32 @@ export default function JenisDataTable({
               {isOpen && (
                 <div className="p-4 border-t bg-white">
                   <div className="flex justify-between items-center mb-4">
-                    <p className="text-sm text-gray-700">
-                      Data Kinerja Pemda untuk jenis:{" "}
-                      <span className="font-semibold">{item.jenis_data}</span>
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSelectedJenisId(String(item.id));
-                        setOpenAddModal(true);
-                      }}
-                      className="px-4 py-2 rounded-md text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 text-sm font-semibold"
-                    >
-                      + Tambah Data Kinerja
-                    </button>
-                  </div>
+  <p className="text-sm text-gray-700">
+    Data Kinerja Pemda untuk jenis:{" "}
+    <span className="font-semibold">{item.jenis_data}</span>
+  </p>
+
+  {/* GROUP TOMBOL */}
+  <div className="flex gap-2">
+    <button
+      onClick={handleSavePDF}
+      className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded"
+    >
+      💾 Simpan PDF
+    </button>
+
+    <button
+      onClick={() => {
+        setSelectedJenisId(String(item.id));
+        setOpenAddModal(true);
+      }}
+      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+    >
+      + Tambah Data Kinerja
+    </button>
+  </div>
+</div>
+
 
                   {visibleRows.length === 0 ? (
                     <p className="text-sm text-gray-500">
@@ -283,7 +323,9 @@ export default function JenisDataTable({
                     </p>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border-collapse">
+                      <table 
+                      id="table-jenis-data"
+                      className="w-full text-sm text-left border-collapse">
                         <thead className="bg-[#10B981] text-white uppercase">
                           <tr>
                             <th
@@ -502,6 +544,7 @@ export default function JenisDataTable({
               ? String(selectedJenisIdForEdit)
               : undefined
           }
+          authToken={token} // Pastikan ini tidak kosong
         />
       )}
 
